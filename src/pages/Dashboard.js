@@ -17,6 +17,7 @@ import LoanService from "../services/loanService";
 import PaymentTrackingService from "../services/PaymentTrackingService";
 import SummaryDashboard from "../components/SummaryDashboard";
 import EmiTracker from "../components/EmiTracker";
+import FinancialOverview from "./FinancialOverview";
 import { 
   FaCar, 
   FaMotorcycle, 
@@ -26,7 +27,8 @@ import {
   FaArrowRight,
   FaChartPie,
   FaListAlt,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaBalanceScale
 } from "react-icons/fa";
 
 const Dashboard = () => {
@@ -200,6 +202,17 @@ const Dashboard = () => {
           Upcoming EMI Tracker & Due Dates
         </Button>
         <Button
+          id="btn-tab-finances"
+          variant={activeView === "finances" ? "contained" : "outlined"}
+          color="primary"
+          size="small"
+          startIcon={<FaBalanceScale />}
+          onClick={() => setActiveView("finances")}
+          sx={{ textTransform: "none", fontWeight: "bold", borderRadius: 2 }}
+        >
+          Financial Overview (Income vs Expenses & EMIs)
+        </Button>
+        <Button
           id="btn-tab-detailed"
           variant={activeView === "detailed" ? "contained" : "outlined"}
           color="primary"
@@ -212,7 +225,9 @@ const Dashboard = () => {
         </Button>
       </Box>
 
-      {activeView === "summary" ? (
+      {activeView === "finances" ? (
+        <FinancialOverview />
+      ) : activeView === "summary" ? (
         <SummaryDashboard 
           initialLoans={loans} 
           initialTransactions={transactions} 

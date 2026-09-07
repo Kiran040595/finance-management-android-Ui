@@ -28,8 +28,12 @@ import {
   FaChartLine, 
   FaCreditCard, 
   FaCalendarAlt,
+  FaBalanceScale,
   FaBars, 
   FaAndroid, 
+  FaMobileAlt,
+  FaDownload,
+  FaCode,
   FaTimes
 } from 'react-icons/fa';
 
@@ -38,6 +42,7 @@ function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [rnModalOpen, setRnModalOpen] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
@@ -77,6 +82,7 @@ function Navbar() {
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: <FaTachometerAlt /> },
+    { label: 'Finances', path: '/financial-overview', icon: <FaBalanceScale /> },
     { label: 'EMI Tracker', path: '/emi-tracker', icon: <FaCalendarAlt /> },
     { label: 'Loans', path: '/loan-management', icon: <FaFileInvoiceDollar /> },
     { label: 'Tracking', path: '/payment-tracking', icon: <FaChartLine /> },
@@ -102,7 +108,7 @@ function Navbar() {
             <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
               FMS
               <Chip 
-                label="Android PWA" 
+                label="Android & React Native" 
                 size="small" 
                 sx={{ 
                   bgcolor: 'rgba(255,255,255,0.2)', 
@@ -133,8 +139,26 @@ function Navbar() {
             ))}
           </Box>
 
-          {/* Mobile & Desktop Install Button */}
+          {/* Mobile & Desktop Action Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setRnModalOpen(true)}
+              startIcon={<FaMobileAlt />}
+              sx={{
+                borderColor: 'rgba(255,255,255,0.6)',
+                color: 'white',
+                fontWeight: '600',
+                textTransform: 'none',
+                fontSize: { xs: '0.75rem', sm: '0.825rem' },
+                px: { xs: 1, sm: 1.5 },
+                '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+              }}
+            >
+              React Native App
+            </Button>
+
             {!isInstalled && (
               <Button
                 variant="contained"
@@ -164,16 +188,16 @@ function Navbar() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       >
-        <Box sx={{ width: 260, pt: 2 }} role="presentation" onClick={() => setDrawerOpen(false)}>
+        <Box sx={{ width: 270, pt: 2 }} role="presentation">
           <Box sx={{ px: 2, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="h6" fontWeight="bold" color="primary">
-              Finance App
+              Vehicle Finance
             </Typography>
             <IconButton size="small" onClick={() => setDrawerOpen(false)}>
               <FaTimes />
             </IconButton>
           </Box>
-          <List>
+          <List onClick={() => setDrawerOpen(false)}>
             {navItems.map((item) => (
               <ListItem key={item.path} disablePadding>
                 <ListItemButton 
@@ -189,15 +213,32 @@ function Navbar() {
               </ListItem>
             ))}
           </List>
-          <Box sx={{ p: 2, mt: 2 }}>
+
+          <Box sx={{ p: 2, mt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              startIcon={<FaMobileAlt />}
+              onClick={() => {
+                setDrawerOpen(false);
+                setRnModalOpen(true);
+              }}
+            >
+              React Native App
+            </Button>
+
             <Button
               fullWidth
               variant="outlined"
               color="success"
               startIcon={<FaAndroid />}
-              onClick={handleInstallClick}
+              onClick={() => {
+                setDrawerOpen(false);
+                handleInstallClick();
+              }}
             >
-              Install on Android
+              Install PWA on Android
             </Button>
           </Box>
         </Box>
@@ -241,6 +282,68 @@ function Navbar() {
           ))}
         </BottomNavigation>
       </Paper>
+
+      {/* React Native Conversion & Download Dialog */}
+      <Dialog open={rnModalOpen} onClose={() => setRnModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#1e3a8a', fontWeight: 'bold' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FaMobileAlt color="#1e40af" size={22} /> React Native Mobile Project
+          </Box>
+          <Chip label="Expo & Android Ready" size="small" color="success" />
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" sx={{ fontWeight: '600', mb: 1, color: '#0f172a' }}>
+            The entire codebase has been converted into React Native!
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Located in the <code>react-native-app/</code> directory with complete native screens, AsyncStorage local persistence, vector icons, bottom tab navigation, WhatsApp reminders, and direct calling.
+          </Typography>
+
+          <Box sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2, border: '1px solid #e2e8f0', mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FaCode color="#1e40af" /> Converted Native Architecture:
+            </Typography>
+            <Box component="ul" sx={{ pl: 2.5, m: 0, '& li': { fontSize: '0.85rem', mb: 0.5 } }}>
+              <li><strong>App.js</strong>: NavigationContainer, StatusBar & AsyncStorage initialization</li>
+              <li><strong>AppNavigator.js</strong>: Native Bottom Tabs (Dashboard, EMI Tracker, Loans, Payments) & Native Stack</li>
+              <li><strong>DashboardScreen.js</strong>: KPI cards, portfolio stats & upcoming obligations</li>
+              <li><strong>EmiTrackerScreen.js</strong>: Urgency filter chips, search, WhatsApp reminder & Call</li>
+              <li><strong>LoansListScreen.js & LoanDetailScreen.js</strong>: Amortization schedule & EMI actions</li>
+              <li><strong>AddLoanScreen.js</strong>: 4-step wizard with real-time EMI auto-calculation</li>
+              <li><strong>PaymentScreen.js & PaymentModal.js</strong>: Instant payment recording</li>
+            </Box>
+          </Box>
+
+          <Box sx={{ bgcolor: '#eff6ff', p: 2, borderRadius: 2, border: '1px solid #bfdbfe', mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#1e3a8a', mb: 0.5 }}>
+              ⚡ How to run on your Android device:
+            </Typography>
+            <Box component="pre" sx={{ bgcolor: '#1e293b', color: '#f8fafc', p: 1.5, borderRadius: 1, fontSize: '0.78rem', overflowX: 'auto', my: 1 }}>
+              cd react-native-app{'\n'}
+              npm install{'\n'}
+              npx expo start
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Scan the QR code with the <strong>Expo Go</strong> app on your Android phone to run immediately!
+            </Typography>
+          </Box>
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="large"
+            href="/react-native-app.zip"
+            download="react-native-app.zip"
+            startIcon={<FaDownload />}
+            sx={{ bgcolor: '#1e40af', py: 1.2, fontWeight: 'bold', textTransform: 'none' }}
+          >
+            Download React Native Project (.ZIP)
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRnModalOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Install App Instruction Dialog for Mobile Users */}
       <Dialog open={infoOpen} onClose={() => setInfoOpen(false)} maxWidth="xs" fullWidth>

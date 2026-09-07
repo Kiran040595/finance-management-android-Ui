@@ -1,0 +1,6 @@
+{
+  "name": "Finance Management",
+  "description": "Comprehensive vehicle finance management system for two-wheelers, cars, and commercial vehicles with hypothecation, EMI repayment schedules, insurance tracking, and cash ledger",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

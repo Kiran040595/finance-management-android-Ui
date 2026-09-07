@@ -31,7 +31,7 @@ const PaymentPage = () => {
   const [pendingEmiAmount, setPendingEmiAmount] = useState(0);
   const [pendingCustomerCount, setPendingCustomerCount] = useState(0);
 
-  const fetchPayments = () => {
+  useEffect(() => {
     setLoading(true);
     PaymentService.getLoanPayments(currentPage, pageSize, searchQuery, sortConfig.key, sortConfig.direction)
       .then((data) => {
@@ -47,10 +47,6 @@ const PaymentPage = () => {
         setError('Error fetching loan payments');
         setLoading(false);
       });
-  };
-
-  useEffect(() => {
-    fetchPayments();
   }, [currentPage, pageSize, searchQuery, sortConfig]);
 
   useEffect(() => {

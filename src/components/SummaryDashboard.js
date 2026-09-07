@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -77,7 +77,7 @@ const SummaryDashboard = ({ initialLoans, initialTransactions, onRefresh }) => {
 
   const [targetMonth, setTargetMonth] = useState(currentMonthStr);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [loansData, txnsData] = await Promise.all([
@@ -92,7 +92,7 @@ const SummaryDashboard = ({ initialLoans, initialTransactions, onRefresh }) => {
       console.error('Error loading Summary Dashboard data:', err);
       setLoading(false);
     }
-  };
+  }, [onRefresh]);
 
   useEffect(() => {
     if (!initialLoans) {
@@ -101,7 +101,7 @@ const SummaryDashboard = ({ initialLoans, initialTransactions, onRefresh }) => {
       setLoans(initialLoans);
       if (initialTransactions) setTransactions(initialTransactions);
     }
-  }, [initialLoans, initialTransactions]);
+  }, [initialLoans, initialTransactions, loadData]);
 
   // ==========================================
   // 1. TOTAL ACTIVE LOANS CALCULATIONS

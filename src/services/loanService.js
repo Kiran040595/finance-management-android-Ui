@@ -56,6 +56,15 @@ const deleteLoan = async (id) => {
   }
 };
 
+const getUpcomingEMIs = async () => {
+  try {
+    return VehicleFinanceStore.getUpcomingEMIs();
+  } catch (error) {
+    console.error("Error fetching upcoming EMIs:", error);
+    throw error;
+  }
+};
+
 const resetData = async () => {
   return VehicleFinanceStore.resetToDefaultData();
 };
@@ -64,6 +73,7 @@ const LoanService = {
   getLoanStats,
   getLoans,
   getLoanById,
+  getUpcomingEMIs,
   createLoan,
   updateLoan,
   deleteLoan,

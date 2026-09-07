@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 
 const CustomerDetailsForm = ({ loanDetails, handleInputChange }) => {
     // Initialize address from loanDetails if available
-    const [fullAddress, setFullAddress] = useState(() => ({
+    const [, setFullAddress] = useState(() => ({
         houseNo: loanDetails.houseNo || "",
         landmark: loanDetails.landmark || "",
         street: loanDetails.street || "",

@@ -7,6 +7,7 @@ import LoanManagement from './pages/LoanManagement';
 import PaymentPage from './pages/PaymentPage';
 import PaymentDetails from './pages/PaymentDetails';
 import PaymentTracking from './pages/PaymentTracking';
+import EmiTrackerPage from './pages/EmiTrackerPage';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/loan/:id" element={<LoanDetails />} />
             <Route path="/loan-management" element={<LoanManagement />} />
+            <Route path="/emi-tracker" element={<EmiTrackerPage />} />
             <Route path="/payment-tracking" element={<PaymentTracking />} />
             <Route path="/payment" element={<PaymentPage />} />
             <Route path="/payments/:fileNumber" element={<PaymentDetails />} />

@@ -27,9 +27,9 @@ import {
   FaFileInvoiceDollar, 
   FaChartLine, 
   FaCreditCard, 
+  FaCalendarAlt,
   FaBars, 
   FaAndroid, 
-  FaDownload,
   FaTimes
 } from 'react-icons/fa';
 
@@ -37,7 +37,6 @@ function Navbar() {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -50,14 +49,12 @@ function Navbar() {
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setIsInstallable(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
     window.addEventListener('appinstalled', () => {
       setIsInstalled(true);
-      setIsInstallable(false);
       setDeferredPrompt(null);
     });
 
@@ -71,9 +68,8 @@ function Navbar() {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
-        setIsInstallable(false);
+        setDeferredPrompt(null);
       }
-      setDeferredPrompt(null);
     } else {
       setInfoOpen(true);
     }
@@ -81,6 +77,7 @@ function Navbar() {
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: <FaTachometerAlt /> },
+    { label: 'EMI Tracker', path: '/emi-tracker', icon: <FaCalendarAlt /> },
     { label: 'Loans', path: '/loan-management', icon: <FaFileInvoiceDollar /> },
     { label: 'Tracking', path: '/payment-tracking', icon: <FaChartLine /> },
     { label: 'Payment', path: '/payment', icon: <FaCreditCard /> },

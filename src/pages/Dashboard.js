@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 import LoanService from "../services/loanService";
 import PaymentTrackingService from "../services/PaymentTrackingService";
 import SummaryDashboard from "../components/SummaryDashboard";
+import EmiTracker from "../components/EmiTracker";
 import { 
   FaCar, 
   FaMotorcycle, 
@@ -24,7 +25,8 @@ import {
   FaShieldAlt, 
   FaArrowRight,
   FaChartPie,
-  FaListAlt
+  FaListAlt,
+  FaCalendarAlt
 } from "react-icons/fa";
 
 const Dashboard = () => {
@@ -32,7 +34,7 @@ const Dashboard = () => {
   const [loans, setLoans] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState("summary"); // "summary" | "detailed"
+  const [activeView, setActiveView] = useState("summary"); // "summary" | "detailed" | "emiTracker"
 
   const fetchData = () => {
     Promise.all([
@@ -132,6 +134,17 @@ const Dashboard = () => {
 
         <Box display="flex" gap={1} flexWrap="wrap">
           <Button
+            id="btn-dashboard-emi-tracker"
+            component={Link}
+            to="/emi-tracker"
+            variant="outlined"
+            color="primary"
+            startIcon={<FaCalendarAlt />}
+            size="small"
+          >
+            EMI Tracker
+          </Button>
+          <Button
             component={Link}
             to="/payment"
             variant="outlined"
@@ -165,6 +178,7 @@ const Dashboard = () => {
         flexWrap="wrap"
       >
         <Button
+          id="btn-tab-summary"
           variant={activeView === "summary" ? "contained" : "outlined"}
           color="primary"
           size="small"
@@ -175,6 +189,18 @@ const Dashboard = () => {
           Summary Dashboard (Active, Targets & Overdues)
         </Button>
         <Button
+          id="btn-tab-emi-tracker-view"
+          variant={activeView === "emiTracker" ? "contained" : "outlined"}
+          color="primary"
+          size="small"
+          startIcon={<FaCalendarAlt />}
+          onClick={() => setActiveView("emiTracker")}
+          sx={{ textTransform: "none", fontWeight: "bold", borderRadius: 2 }}
+        >
+          Upcoming EMI Tracker & Due Dates
+        </Button>
+        <Button
+          id="btn-tab-detailed"
           variant={activeView === "detailed" ? "contained" : "outlined"}
           color="primary"
           size="small"
@@ -192,6 +218,8 @@ const Dashboard = () => {
           initialTransactions={transactions} 
           onRefresh={fetchData} 
         />
+      ) : activeView === "emiTracker" ? (
+        <EmiTracker embedded={false} />
       ) : (
         <>
           {/* Primary KPI Row */}

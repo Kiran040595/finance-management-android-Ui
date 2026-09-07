@@ -53,12 +53,23 @@ const updateEMI = async (fileNumber, emiNumber, data) => {
   }
 };
 
+// Get all upcoming EMI installments across active loans
+const getUpcomingEMIs = async () => {
+  try {
+    return VehicleFinanceStore.getUpcomingEMIs();
+  } catch (error) {
+    console.error("Error fetching upcoming EMIs:", error);
+    throw new Error('Error fetching upcoming EMIs');
+  }
+};
+
 const PaymentService = {
   getLoanPayments,
   makePayment,
   getLoanDetailsByFileNumber,
   payEMI,
   updateEMI,
+  getUpcomingEMIs,
 };
 
 export default PaymentService;

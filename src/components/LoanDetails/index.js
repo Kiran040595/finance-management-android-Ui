@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import LoanService from '../../services/loanService';
 import PaymentService from '../../services/paymentService';
@@ -55,7 +55,7 @@ function LoanDetails() {
   const [payMode, setPayMode] = useState('UPI');
   const [payNotes, setPayNotes] = useState('');
 
-  const fetchLoanData = () => {
+  const fetchLoanData = useCallback(() => {
     setLoading(true);
     LoanService.getLoanById(id)
       .then((data) => {
@@ -68,11 +68,11 @@ function LoanDetails() {
         setError('Error fetching loan details');
         setLoading(false);
       });
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchLoanData();
-  }, [id]);
+  }, [fetchLoanData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

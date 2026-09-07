@@ -25,10 +25,10 @@ const LoanDetailsForm = ({ loanDetails, handleInputChange }) => {
     useEffect(() => {
         const calculatedEmi = calculateEMI(loanDetails.loanAmount, loanDetails.interestRate, loanDetails.tenure);
         handleInputChange({ target: { name: "emi", value: calculatedEmi } });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loanDetails.loanAmount, loanDetails.interestRate, loanDetails.tenure]);
 
     const handleLoanDataChange = (event) => {
-        const { name, value } = event.target;
         handleInputChange(event); // Update the parent state directly
     };
 

@@ -29,14 +29,9 @@ const GuarantorDetailsForm = ({ loanDetails, handleInputChange }) => {
         }
     }, [loanDetails?.guarantorFullAddress]);
 
-    // Function to combine all fields into a single address string
-    const combineAddress = () => {
-        return Object.values(fullAddress).filter(Boolean).join(", ");
-    };
-
     // Memoized function to prevent infinite re-renders
     const updateGuarantorAddress = useCallback(() => {
-        const combinedAddress = combineAddress();
+        const combinedAddress = Object.values(fullAddress).filter(Boolean).join(", ");
         if (loanDetails.guarantorFullAddress !== combinedAddress) {
             handleInputChange({
                 target: { name: "guarantorFullAddress", value: combinedAddress },

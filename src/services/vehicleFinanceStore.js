@@ -703,7 +703,10 @@ export class VehicleFinanceStore {
 
   static payEMI(fileNumber, emiNumber, paymentAmount, paymentDate, paymentMode = 'Cash', notes = '') {
     const loans = this.getLoans();
-    const loanIndex = loans.findIndex((l) => String(l.fileNumber).toLowerCase() === String(fileNumber).toLowerCase());
+    const loanIndex = loans.findIndex((l) => 
+      String(l.fileNumber).toLowerCase() === String(fileNumber).toLowerCase() ||
+      String(l.id).toLowerCase() === String(fileNumber).toLowerCase()
+    );
     if (loanIndex === -1) throw new Error('Loan not found');
 
     const loan = loans[loanIndex];
@@ -846,6 +849,70 @@ export class VehicleFinanceStore {
       totalAmountReceived,
       totalOutstandingAmount,
     };
+  }
+
+  static getUpcomingEMIs() {
+    const loans = this.getLoans();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = [];
+
+    loans.forEach((loan) => {
+      if (loan.status === 'Closed') return;
+      if (!Array.isArray(loan.emiDetails)) return;
+
+      loan.emiDetails.forEach((emi) => {
+        if (emi.status === 'Paid') return;
+
+        const dueDate = new Date(emi.emiDate);
+        dueDate.setHours(0, 0, 0, 0);
+
+        // Days difference: positive = future, 0 = today, negative = overdue
+        const diffTime = dueDate.getTime() - today.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        let urgency = 'upcoming';
+        if (diffDays < 0) urgency = 'overdue';
+        else if (diffDays === 0) urgency = 'today';
+        else if (diffDays <= 3) urgency = 'urgent';
+        else if (diffDays <= 7) urgency = 'soon';
+        else if (diffDays <= 30) urgency = 'month';
+        else urgency = 'future';
+
+        upcoming.push({
+          loanId: loan.id,
+          fileNumber: loan.fileNumber,
+          customerName: loan.customerName,
+          customerPhone: loan.customerPhonePrimary,
+          customerPhoneSecondary: loan.customerPhoneSecondary,
+          customerEmail: loan.customerEmail,
+          vehicleType: loan.vehicleType || 'Two Wheeler',
+          vehicleMake: loan.vehicleMake || '',
+          vehicleModel: loan.vehicleModel || '',
+          vehicleNumber: loan.vehicleNumber || 'N/A',
+          totalTenure: loan.tenure,
+          paidEmiCount: loan.paidEmiCount || 0,
+          remainingEmiCount: loan.remainingEmi || 0,
+          loanStatus: loan.status,
+          emiNumber: emi.emiNumber,
+          emiDate: emi.emiDate,
+          emiAmount: emi.emiAmount,
+          principalComponent: emi.principalComponent,
+          interestComponent: emi.interestComponent,
+          remainingAmount: emi.remainingAmount,
+          penaltyAmount: emi.penaltyAmount || (diffDays < 0 ? Math.round(emi.emiAmount * 0.002 * Math.abs(diffDays)) : 0),
+          status: diffDays < 0 ? 'Overdue' : 'Pending',
+          overdueDays: diffDays < 0 ? Math.abs(diffDays) : 0,
+          daysUntilDue: diffDays,
+          urgency,
+        });
+      });
+    });
+
+    // Sort by due date ascending
+    upcoming.sort((a, b) => new Date(a.emiDate) - new Date(b.emiDate));
+    return upcoming;
   }
 
   static getLoanPayments(currentPage = 1, pageSize = 10, searchQuery = '', sortKey = 'fileNumber', sortDirection = 'asc') {

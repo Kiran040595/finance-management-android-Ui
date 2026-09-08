@@ -30,7 +30,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env BUILD_PATH=dist react-scripts build",
+    "build": "cross-env GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=1536 BUILD_PATH=dist react-scripts build",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

@@ -187,6 +187,16 @@ export const DashboardScreen = ({ navigation }) => {
             <Text style={styles.actionCardTitle}>Pay EMI</Text>
             <Text style={styles.actionCardSub}>Instant receipt</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: '#475569' }]}
+            onPress={() => navigation.navigate('PaymentTracking')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="receipt" size={24} color="#ffffff" />
+            <Text style={styles.actionCardTitle}>Ledger</Text>
+            <Text style={styles.actionCardSub}>Audit trail</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Upcoming EMI Obligations Preview */}

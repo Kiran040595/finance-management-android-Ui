@@ -11,6 +11,7 @@ import LoansListScreen from '../screens/LoansListScreen';
 import LoanDetailScreen from '../screens/LoanDetailScreen';
 import AddLoanScreen from '../screens/AddLoanScreen';
 import PaymentScreen from '../screens/PaymentScreen';
+import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -31,7 +32,7 @@ function BottomTabs() {
           paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size, focused }) => {
@@ -44,6 +45,8 @@ function BottomTabs() {
             iconName = focused ? 'car-sport' : 'car-sport-outline';
           } else if (route.name === 'PaymentTab') {
             iconName = focused ? 'card' : 'card-outline';
+          } else if (route.name === 'TrackingTab') {
+            iconName = focused ? 'receipt' : 'receipt-outline';
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -67,7 +70,12 @@ function BottomTabs() {
       <Tab.Screen
         name="PaymentTab"
         component={PaymentScreen}
-        options={{ tabBarLabel: 'Collect Pay' }}
+        options={{ tabBarLabel: 'Collect' }}
+      />
+      <Tab.Screen
+        name="TrackingTab"
+        component={PaymentTrackingScreen}
+        options={{ tabBarLabel: 'Ledger' }}
       />
     </Tab.Navigator>
   );
@@ -99,6 +107,11 @@ export function AppNavigator() {
       <Stack.Screen
         name="EmiTracker"
         component={EmiTrackerScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="PaymentTracking"
+        component={PaymentTrackingScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

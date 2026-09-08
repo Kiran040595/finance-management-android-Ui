@@ -28,7 +28,6 @@ import {
   FaChartLine, 
   FaCreditCard, 
   FaCalendarAlt,
-  FaBalanceScale,
   FaBars, 
   FaAndroid, 
   FaMobileAlt,
@@ -82,7 +81,6 @@ function Navbar() {
 
   const navItems = [
     { label: 'Dashboard', path: '/', icon: <FaTachometerAlt /> },
-    { label: 'Finances', path: '/financial-overview', icon: <FaBalanceScale /> },
     { label: 'EMI Tracker', path: '/emi-tracker', icon: <FaCalendarAlt /> },
     { label: 'Loans', path: '/loan-management', icon: <FaFileInvoiceDollar /> },
     { label: 'Tracking', path: '/payment-tracking', icon: <FaChartLine /> },

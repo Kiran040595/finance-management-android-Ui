@@ -8,7 +8,6 @@ import PaymentPage from './pages/PaymentPage';
 import PaymentDetails from './pages/PaymentDetails';
 import PaymentTracking from './pages/PaymentTracking';
 import EmiTrackerPage from './pages/EmiTrackerPage';
-import FinancialOverview from './pages/FinancialOverview';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -19,7 +18,6 @@ function App() {
         <div className="pt-16 pb-20 md:pb-6 min-h-screen">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/financial-overview" element={<FinancialOverview />} />
             <Route path="/loan/:id" element={<LoanDetails />} />
             <Route path="/loan-management" element={<LoanManagement />} />
             <Route path="/emi-tracker" element={<EmiTrackerPage />} />

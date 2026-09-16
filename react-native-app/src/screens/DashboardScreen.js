@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
@@ -16,12 +17,14 @@ import EmiCard from '../components/EmiCard';
 import PaymentModal from '../components/PaymentModal';
 import LoanService from '../services/loanService';
 import PaymentService from '../services/paymentService';
+import authService from '../services/authService';
 
 export const DashboardScreen = ({ navigation }) => {
   const [stats, setStats] = useState(null);
   const [upcoming, setUpcoming] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
 
   // Pay Modal
   const [selectedEmi, setSelectedEmi] = useState(null);
@@ -35,6 +38,7 @@ export const DashboardScreen = ({ navigation }) => {
       ]);
       setStats(s);
       setUpcoming(u.slice(0, 4)); // top 4 upcoming
+      setCurrentUser(authService.getCurrentUser());
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -68,9 +72,29 @@ export const DashboardScreen = ({ navigation }) => {
       paymentData.amount,
       paymentData.date,
       paymentData.mode,
-      paymentData.notes
+      paymentData.notes,
+      {
+        agentName: paymentData.agentName,
+        penaltyCollected: paymentData.penaltyCollected,
+        penaltyWaived: paymentData.penaltyWaived,
+      }
     );
     loadData();
+  };
+
+  const handleUserLogout = () => {
+    Alert.alert(
+      `${currentUser?.name || 'User'} (${currentUser?.role || 'ADMIN'})`,
+      `Currently signed in with ${currentUser?.role || 'ADMIN'} privileges.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out / Switch User',
+          style: 'destructive',
+          onPress: () => authService.logout(),
+        },
+      ]
+    );
   };
 
   const formatCurrency = (val) => '₹' + Number(val || 0).toLocaleString('en-IN');
@@ -88,15 +112,30 @@ export const DashboardScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header
         title="Vehicle Finance"
-        subtitle="Automobile Loan Management & EMI Tracking"
+        subtitle="Automobile Loan Management & Collections"
         rightAction={
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => navigation.navigate('AddLoan')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View style={styles.headerRightRow}>
+            <TouchableOpacity
+              style={styles.roleBadge}
+              onPress={handleUserLogout}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={currentUser?.role === 'ADMIN' ? 'shield-checkmark' : 'briefcase'}
+                size={13}
+                color="#ffffff"
+              />
+              <Text style={styles.roleBadgeText}>{currentUser?.role || 'ADMIN'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => navigation.navigate('AddLoan')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -155,47 +194,67 @@ export const DashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Quick Action Navigation Buttons */}
-        <Text style={styles.sectionHeading}>Quick Actions</Text>
-        <View style={styles.quickActionsRow}>
+        {/* Quick Action Navigation Grid */}
+        <Text style={styles.sectionHeading}>Operations & Quick Actions</Text>
+        <View style={styles.actionsGrid}>
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#1e40af' }]}
-            onPress={() => navigation.navigate('EmiTracker')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="calendar" size={24} color="#ffffff" />
-            <Text style={styles.actionCardTitle}>EMI Tracker</Text>
-            <Text style={styles.actionCardSub}>Due dates & reminders</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#0f766e' }]}
+            style={[styles.actionTile, { backgroundColor: '#0f766e' }]}
             onPress={() => navigation.navigate('AddLoan')}
             activeOpacity={0.8}
           >
-            <Ionicons name="add-circle" size={24} color="#ffffff" />
-            <Text style={styles.actionCardTitle}>New Loan</Text>
-            <Text style={styles.actionCardSub}>Customer & vehicle</Text>
+            <Ionicons name="add-circle" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>New Loan</Text>
+            <Text style={styles.actionTileSub}>Sanction loan</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#c2410c' }]}
+            style={[styles.actionTile, { backgroundColor: '#c2410c' }]}
             onPress={() => navigation.navigate('Payment')}
             activeOpacity={0.8}
           >
-            <Ionicons name="card" size={24} color="#ffffff" />
-            <Text style={styles.actionCardTitle}>Pay EMI</Text>
-            <Text style={styles.actionCardSub}>Instant receipt</Text>
+            <Ionicons name="card" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>Pay EMI</Text>
+            <Text style={styles.actionTileSub}>Collect payment</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: '#475569' }]}
+            style={[styles.actionTile, { backgroundColor: '#1e40af' }]}
+            onPress={() => navigation.navigate('DayEndSummary')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="calendar" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>Day-End</Text>
+            <Text style={styles.actionTileSub}>Daily summary</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionTile, { backgroundColor: '#7c3aed' }]}
+            onPress={() => navigation.navigate('Analytics')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="pie-chart" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>Analytics</Text>
+            <Text style={styles.actionTileSub}>Trends & report</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionTile, { backgroundColor: '#b45309' }]}
+            onPress={() => navigation.navigate('EmiTracker')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="alarm" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>EMI Tracker</Text>
+            <Text style={styles.actionTileSub}>Overdue alerts</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionTile, { backgroundColor: '#334155' }]}
             onPress={() => navigation.navigate('PaymentTracking')}
             activeOpacity={0.8}
           >
-            <Ionicons name="receipt" size={24} color="#ffffff" />
-            <Text style={styles.actionCardTitle}>Ledger</Text>
-            <Text style={styles.actionCardSub}>Audit trail</Text>
+            <Ionicons name="receipt" size={22} color="#ffffff" />
+            <Text style={styles.actionTileTitle}>Ledger</Text>
+            <Text style={styles.actionTileSub}>Transaction audit</Text>
           </TouchableOpacity>
         </View>
 
@@ -255,6 +314,28 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
   },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.round,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  roleBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   headerBtn: {
     width: 32,
     height: 32,
@@ -298,29 +379,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.primary,
   },
-  quickActionsRow: {
+  actionsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
-  actionCard: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
+  actionTile: {
+    width: '31%',
+    padding: spacing.sm,
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'flex-start',
     elevation: 2,
   },
-  actionCardTitle: {
+  actionTileTitle: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    marginTop: 8,
+    marginTop: 6,
   },
-  actionCardSub: {
+  actionTileSub: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 9,
+    marginTop: 1,
   },
   emptyCard: {
     backgroundColor: colors.cardBg,

@@ -190,6 +190,63 @@ export const LoanService = {
     return VehicleFinanceStore.getLoanStats();
   },
 
+  /**
+   * Update loan details via PUT /api/loan/{fileNumber}
+   */
+  async updateLoan(fileNumber, loanData) {
+    const cleanFileNumber = parseInt(String(fileNumber).replace(/\D/g, ''), 10) || fileNumber;
+
+    const payload = {
+      fileNumber: cleanFileNumber,
+      customerName: loanData.customerName,
+      customerPhonePrimary: loanData.customerPhone || loanData.customerPhonePrimary,
+      customerPhoneSecondary: loanData.customerPhone2 || loanData.customerPhoneSecondary || '',
+      customerFullAddress: loanData.customerAddress || loanData.customerFullAddress || '',
+      customerFatherName: loanData.customerFatherName || '',
+      customerAadhaarNumber: loanData.customerAadhaarNumber || '',
+      vehicleNumber: (loanData.vehicleNumber || '').toUpperCase(),
+      vehicleModelYear: loanData.vehicleModelYear ? parseInt(loanData.vehicleModelYear, 10) : new Date().getFullYear(),
+      vehicleInsuranceExpiryDate: loanData.insuranceExpiryDate || null,
+      loanAmount: parseFloat(loanData.loanAmount || 0),
+      interestRate: parseFloat(loanData.interestRate || 10.5),
+      tenure: parseInt(loanData.tenure || 12, 10),
+      emi: parseFloat(loanData.emiAmount || loanData.emi || 0),
+      guarantorName: loanData.guarantorName || '',
+      guarantorPhonePrimary: loanData.guarantorPhone || loanData.guarantorPhonePrimary || '',
+      guarantorPhoneSecondary: loanData.guarantorPhoneSecondary || '',
+      guarantorFullAddress: loanData.guarantorAddress || loanData.guarantorFullAddress || '',
+      guarantorAadhaarNumber: loanData.guarantorAadhaarNumber || '',
+    };
+
+    try {
+      await apiClient.put(`/api/loan/${cleanFileNumber}`, payload);
+    } catch (err) {
+      console.warn('Backend loan update notice:', err.message);
+    }
+
+    return VehicleFinanceStore.updateLoan(fileNumber, loanData);
+  },
+
+  /**
+   * Update an individual EMI installment via PUT /api/payment/payments/{fileNumber}/{emiNumber}
+   */
+  async updateEmi(fileNumber, emiNumber, emiData) {
+    const cleanFileNumber = parseInt(String(fileNumber).replace(/\D/g, ''), 10) || fileNumber;
+
+    try {
+      await apiClient.put(`/api/payment/payments/${cleanFileNumber}/${emiNumber}`, {
+        emiDate: emiData.emiDate,
+        paymentDate: emiData.paidDate || emiData.paymentDate || null,
+        paymentAmount: parseFloat(emiData.paidAmount || emiData.paymentAmount || 0),
+        remainingAmount: parseFloat(emiData.remainingAmount || 0),
+      });
+    } catch (err) {
+      console.warn('Backend EMI update notice:', err.message);
+    }
+
+    return VehicleFinanceStore.updateEmi(fileNumber, emiNumber, emiData);
+  },
+
   async deleteLoan(id) {
     try {
       await apiClient.delete(`/api/loan/${id}`);

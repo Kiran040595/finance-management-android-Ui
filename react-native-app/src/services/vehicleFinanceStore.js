@@ -102,7 +102,7 @@ class VehicleFinanceStore {
     return newLoan;
   }
 
-  static async payEMI(fileNumber, emiNumber, paymentAmount, paymentDate, paymentMode = 'UPI', notes = '') {
+  static async payEMI(fileNumber, emiNumber, paymentAmount, paymentDate, paymentMode = 'UPI', notes = '', options = {}) {
     const loans = await this.getLoans();
     const loanIndex = loans.findIndex(
       (l) =>
@@ -118,9 +118,13 @@ class VehicleFinanceStore {
 
     emi.status = 'Paid';
     emi.remainingAmount = 0;
+    emi.paidAmount = paymentAmount;
     emi.paidDate = paymentDate || new Date().toISOString().split('T')[0];
     emi.paymentMode = paymentMode;
     emi.notes = notes;
+    emi.agentName = options.agentName || 'Admin';
+    emi.penaltyCollected = options.penaltyCollected || 0;
+    emi.penaltyWaived = options.penaltyWaived || 0;
 
     loan.paidEmiCount = (loan.paidEmiCount || 0) + 1;
     loan.remainingEmi = Math.max(0, (loan.remainingEmi || loan.tenure) - 1);
@@ -257,12 +261,77 @@ class VehicleFinanceStore {
             mode: emi.paymentMode || 'UPI',
             type: 'CREDIT',
             status: 'COMPLETED',
+            agentName: emi.agentName || 'Admin',
+            penaltyCollected: emi.penaltyCollected || 0,
+            penaltyWaived: emi.penaltyWaived || 0,
             reference: `REF-${Math.floor(100000 + Math.random() * 900000)}`,
           });
         }
       });
     });
     return transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+
+  static async updateLoan(fileNumber, updatedData) {
+    const loans = await this.getLoans();
+    const idx = loans.findIndex(
+      (l) =>
+        String(l.fileNumber).toLowerCase() === String(fileNumber).toLowerCase() ||
+        String(l.id).toLowerCase() === String(fileNumber).toLowerCase()
+    );
+    if (idx === -1) {
+      const newEntry = { ...updatedData, fileNumber, id: String(fileNumber) };
+      loans.unshift(newEntry);
+      inMemoryLoans = loans;
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
+      } catch (e) {}
+      return newEntry;
+    }
+
+    loans[idx] = {
+      ...loans[idx],
+      ...updatedData,
+    };
+    inMemoryLoans = loans;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
+    } catch (e) {}
+    return loans[idx];
+  }
+
+  static async deleteLoan(fileNumber) {
+    const loans = await this.getLoans();
+    const filtered = loans.filter(
+      (l) =>
+        String(l.fileNumber).toLowerCase() !== String(fileNumber).toLowerCase() &&
+        String(l.id).toLowerCase() !== String(fileNumber).toLowerCase()
+    );
+    inMemoryLoans = filtered;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    } catch (e) {}
+    return true;
+  }
+
+  static async updateEmi(fileNumber, emiNumber, emiData) {
+    const loans = await this.getLoans();
+    const loan = loans.find(
+      (l) =>
+        String(l.fileNumber).toLowerCase() === String(fileNumber).toLowerCase() ||
+        String(l.id).toLowerCase() === String(fileNumber).toLowerCase()
+    );
+    if (!loan || !Array.isArray(loan.emiDetails)) return null;
+
+    const emi = loan.emiDetails.find((e) => e.emiNumber === emiNumber);
+    if (!emi) return null;
+
+    Object.assign(emi, emiData);
+    inMemoryLoans = loans;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
+    } catch (e) {}
+    return emi;
   }
 }
 

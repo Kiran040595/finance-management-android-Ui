@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,41 +12,103 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
+import authService from '../services/authService';
 
 export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
   const [amount, setAmount] = useState('');
+  const [baseEmiAmount, setBaseEmiAmount] = useState(0);
+  const [penaltyAmount, setPenaltyAmount] = useState('0');
+  const [penaltyAction, setPenaltyAction] = useState('include'); // 'include' | 'waive'
   const [mode, setMode] = useState('UPI');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+  const [collectorAgent, setCollectorAgent] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const currentUser = authService.getCurrentUser();
+
+  // Overdue calculation
+  const overdueInfo = useMemo(() => {
+    if (!emi || !emi.emiDate) return { isOverdue: false, days: 0, suggestedPenalty: 0 };
+    const payDate = new Date(date || new Date());
+    payDate.setHours(0, 0, 0, 0);
+    const dueDate = new Date(emi.emiDate);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffTime = payDate.getTime() - dueDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      // 3 days grace period, then ₹50 / day
+      const billableDays = Math.max(0, diffDays - 3);
+      const suggestedPenalty = billableDays * 50;
+      return { isOverdue: true, days: diffDays, suggestedPenalty };
+    }
+    return { isOverdue: false, days: 0, suggestedPenalty: 0 };
+  }, [emi, date]);
 
   useEffect(() => {
     if (emi) {
-      setAmount(String(emi.remainingAmount || emi.emiAmount || ''));
+      const base = Number(emi.remainingAmount || emi.emiAmount || 0);
+      setBaseEmiAmount(base);
+
+      const penalty = emi.penaltyAmount || overdueInfo.suggestedPenalty;
+      setPenaltyAmount(String(penalty));
+      setPenaltyAction(penalty > 0 ? 'include' : 'waive');
+
+      const initialTotal = penalty > 0 ? base + penalty : base;
+      setAmount(String(initialTotal));
+
       setMode('UPI');
       setDate(new Date().toISOString().split('T')[0]);
       setNotes(`Payment for EMI #${emi.emiNumber}`);
+      setCollectorAgent(currentUser?.name || 'Administrator');
     }
-  }, [emi]);
+  }, [emi, overdueInfo.suggestedPenalty, currentUser]);
+
+  // Recalculate total amount when penalty or action changes
+  const handlePenaltyToggle = (action) => {
+    setPenaltyAction(action);
+    const pVal = parseFloat(penaltyAmount) || 0;
+    if (action === 'include') {
+      setAmount(String(baseEmiAmount + pVal));
+    } else {
+      setAmount(String(baseEmiAmount));
+    }
+  };
+
+  const handlePenaltyChange = (text) => {
+    setPenaltyAmount(text);
+    const pVal = parseFloat(text) || 0;
+    if (penaltyAction === 'include') {
+      setAmount(String(baseEmiAmount + pVal));
+    }
+  };
 
   if (!emi) return null;
 
   const paymentModes = ['UPI', 'Cash', 'Bank Transfer', 'Cheque'];
 
   const handleSubmit = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
+    const numericAmount = parseFloat(amount);
+    if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
       Alert.alert('Invalid Amount', 'Please enter a valid payment amount');
       return;
     }
+
     try {
       setLoading(true);
       await onConfirm({
         fileNumber: emi.fileNumber,
         emiNumber: emi.emiNumber,
-        amount: parseFloat(amount),
+        amount: numericAmount,
+        baseEmiAmount,
+        penaltyCollected: penaltyAction === 'include' ? parseFloat(penaltyAmount) || 0 : 0,
+        penaltyWaived: penaltyAction === 'waive' ? parseFloat(penaltyAmount) || 0 : 0,
         date,
         mode,
         notes,
+        agentName: collectorAgent || currentUser?.name || 'Admin',
       });
       setLoading(false);
       onClose();
@@ -63,7 +125,7 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="card" size={22} color={colors.primary} />
+              <Ionicons name="receipt" size={22} color={colors.primary} />
               <Text style={styles.title}>Record EMI Payment</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -92,16 +154,88 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
                   EMI #{emi.emiNumber} (Due: {emi.emiDate})
                 </Text>
               </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Base EMI Amount</Text>
+                <Text style={[styles.infoVal, { fontWeight: '700' }]}>
+                  ₹{baseEmiAmount.toLocaleString('en-IN')}
+                </Text>
+              </View>
             </View>
 
+            {/* Overdue Penalty Calculator Banner */}
+            {overdueInfo.isOverdue && (
+              <View style={styles.penaltyBanner}>
+                <View style={styles.penaltyHeader}>
+                  <Ionicons name="warning" size={18} color="#d97706" />
+                  <Text style={styles.penaltyTitle}>
+                    Overdue by {overdueInfo.days} days ({overdueInfo.days > 3 ? `${overdueInfo.days - 3} days @ ₹50/day` : 'Within 3 days grace'})
+                  </Text>
+                </View>
+
+                <View style={styles.penaltyControlsRow}>
+                  <View style={styles.penaltyInputGroup}>
+                    <Text style={styles.penaltyLabel}>Late Fee (₹):</Text>
+                    <TextInput
+                      style={styles.penaltyInput}
+                      value={penaltyAmount}
+                      onChangeText={handlePenaltyChange}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.penaltyActionToggle}>
+                    <TouchableOpacity
+                      style={[
+                        styles.penaltyToggleBtn,
+                        penaltyAction === 'include' && styles.penaltyToggleBtnActive,
+                      ]}
+                      onPress={() => handlePenaltyToggle('include')}
+                    >
+                      <Text
+                        style={[
+                          styles.penaltyToggleText,
+                          penaltyAction === 'include' && styles.penaltyToggleTextActive,
+                        ]}
+                      >
+                        + Charge
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.penaltyToggleBtn,
+                        penaltyAction === 'waive' && styles.penaltyToggleBtnWaive,
+                      ]}
+                      onPress={() => handlePenaltyToggle('waive')}
+                    >
+                      <Text
+                        style={[
+                          styles.penaltyToggleText,
+                          penaltyAction === 'waive' && styles.penaltyToggleTextActive,
+                        ]}
+                      >
+                        Waive
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <Text style={styles.penaltyNote}>
+                  {penaltyAction === 'include'
+                    ? `✓ Adding ₹${penaltyAmount} late fee to total receipt amount`
+                    : `✓ Late fee waived off by ${currentUser?.name || 'Admin'}`}
+                </Text>
+              </View>
+            )}
+
             {/* Amount Input */}
-            <Text style={styles.inputLabel}>Payment Amount (₹) *</Text>
+            <Text style={styles.inputLabel}>Total Payment Amount (₹) *</Text>
             <TextInput
               style={styles.input}
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              placeholder="e.g. 5000"
+              placeholder="e.g. 5167"
             />
 
             {/* Payment Mode Selector */}
@@ -112,6 +246,7 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
                   key={m}
                   style={[styles.modeChip, mode === m && styles.modeChipActive]}
                   onPress={() => setMode(m)}
+                  activeOpacity={0.7}
                 >
                   <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>{m}</Text>
                 </TouchableOpacity>
@@ -119,7 +254,7 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
             </View>
 
             {/* Payment Date Input */}
-            <Text style={styles.inputLabel}>Payment Date (YYYY-MM-DD)</Text>
+            <Text style={styles.inputLabel}>Payment Date</Text>
             <TextInput
               style={styles.input}
               value={date}
@@ -127,14 +262,23 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
               placeholder="YYYY-MM-DD"
             />
 
+            {/* Collector Agent Attribution */}
+            <Text style={styles.inputLabel}>Collector / Agent Name</Text>
+            <TextInput
+              style={styles.input}
+              value={collectorAgent}
+              onChangeText={setCollectorAgent}
+              placeholder="e.g. Administrator / Branch Manager"
+            />
+
             {/* Transaction Ref / Notes */}
             <Text style={styles.inputLabel}>Reference ID / Notes</Text>
             <TextInput
-              style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
+              style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
               value={notes}
               onChangeText={setNotes}
               multiline
-              placeholder="e.g. UPI Ref / Cheque No"
+              placeholder="e.g. UPI Ref #40291039401 / Cash in hand"
             />
           </ScrollView>
 
@@ -199,98 +343,175 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 6,
+    borderColor: '#e2e8f0',
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingVertical: 4,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   infoVal: {
     fontSize: 13,
-    fontWeight: '600',
     color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  penaltyBanner: {
+    backgroundColor: '#fffbeb',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  penaltyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  penaltyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  penaltyControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  penaltyInputGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  penaltyLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
+  },
+  penaltyInput: {
+    width: 80,
+    height: 34,
+    backgroundColor: '#ffffff',
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    paddingHorizontal: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  penaltyActionToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#fef3c7',
+    borderRadius: borderRadius.sm,
+    padding: 2,
+  },
+  penaltyToggleBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.sm,
+  },
+  penaltyToggleBtnActive: {
+    backgroundColor: '#d97706',
+  },
+  penaltyToggleBtnWaive: {
+    backgroundColor: '#059669',
+  },
+  penaltyToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  penaltyToggleTextActive: {
+    color: '#ffffff',
+  },
+  penaltyNote: {
+    fontSize: 11,
+    color: '#b45309',
+    marginTop: 2,
   },
   inputLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: colors.textSecondary,
     marginBottom: 6,
-    marginTop: 10,
+    marginTop: 4,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: colors.borderDark,
+    backgroundColor: '#f8fafc',
     borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     fontSize: 15,
     color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   modesRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   modeChip: {
-    paddingHorizontal: 14,
+    flex: 1,
     paddingVertical: 8,
-    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: colors.borderDark,
-    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
   },
   modeChipActive: {
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   modeText: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   modeTextActive: {
-    color: colors.primary,
-    fontWeight: '700',
+    color: '#ffffff',
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderColor: colors.divider,
-    gap: 12,
+    paddingTop: spacing.sm,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.borderDark,
-    alignItems: 'center',
+    borderColor: colors.divider,
   },
   cancelBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   confirmBtn: {
     flex: 2,
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: borderRadius.md,
+    height: 48,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    borderRadius: borderRadius.md,
   },
   confirmBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#ffffff',
   },
 });

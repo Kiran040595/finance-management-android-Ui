@@ -13,17 +13,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import Header from '../components/Header';
 import PaymentModal from '../components/PaymentModal';
+import EditEmiModal from '../components/EditEmiModal';
 import LoanService from '../services/loanService';
 import PaymentService from '../services/paymentService';
+import authService from '../services/authService';
 
 export const LoanDetailScreen = ({ route, navigation }) => {
   const { loanId } = route.params || {};
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   // Pay Modal
   const [selectedEmi, setSelectedEmi] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Edit EMI Modal
+  const [editingEmi, setEditingEmi] = useState(null);
+  const [editEmiModalVisible, setEditEmiModalVisible] = useState(false);
+
+  const isAdmin = authService.isAdmin();
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -39,7 +48,11 @@ export const LoanDetailScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     fetchDetail();
-  }, [fetchDetail]);
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchDetail();
+    });
+    return unsubscribe;
+  }, [navigation, fetchDetail]);
 
   const handlePayEmi = (emi) => {
     setSelectedEmi({
@@ -59,10 +72,56 @@ export const LoanDetailScreen = ({ route, navigation }) => {
       paymentData.amount,
       paymentData.date,
       paymentData.mode,
-      paymentData.notes
+      paymentData.notes,
+      {
+        agentName: paymentData.agentName,
+        penaltyCollected: paymentData.penaltyCollected,
+        penaltyWaived: paymentData.penaltyWaived,
+      }
     );
     Alert.alert('Payment Recorded', `Recorded payment for EMI #${paymentData.emiNumber}`);
     fetchDetail();
+  };
+
+  const handleOpenEditEmi = (emi) => {
+    setEditingEmi(emi);
+    setEditEmiModalVisible(true);
+  };
+
+  const handleSaveEmi = async (updatedEmi) => {
+    await LoanService.updateEmi(loan.fileNumber || loan.id, updatedEmi.emiNumber, updatedEmi);
+    Alert.alert('Success', `Installment #${updatedEmi.emiNumber} updated.`);
+    fetchDetail();
+  };
+
+  const handleDeleteLoan = () => {
+    Alert.alert(
+      'Delete Loan Account',
+      `Are you sure you want to permanently delete Loan #${loan.fileNumber} for ${loan.customerName}? All amortizations and schedule records will be removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Loan',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await LoanService.deleteLoan(loan.fileNumber || loan.id);
+              Alert.alert('Deleted', 'Loan account deleted successfully.', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (e) {
+              Alert.alert('Error', e.message || 'Failed to delete loan');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatCurrency = (val) => '₹' + Number(val || 0).toLocaleString('en-IN');
@@ -85,9 +144,48 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         subtitle={`${loan.customerName} • ${loan.vehicleModel}`}
         showBack
         onBack={() => navigation.goBack()}
+        rightAction={
+          <TouchableOpacity
+            style={styles.headerEditBtn}
+            onPress={() => navigation.navigate('EditLoan', { loan })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        }
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Management Actions Row */}
+        <View style={styles.managementBar}>
+          <TouchableOpacity
+            style={styles.actionBtnSecondary}
+            onPress={() => navigation.navigate('EditLoan', { loan })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.primary} />
+            <Text style={styles.actionBtnSecondaryText}>Edit Loan Info</Text>
+          </TouchableOpacity>
+
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.actionBtnDanger}
+              onPress={handleDeleteLoan}
+              disabled={deleting}
+              activeOpacity={0.7}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color={colors.error} />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={16} color={colors.error} />
+                  <Text style={styles.actionBtnDangerText}>Delete Loan</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Status & Highlights Card */}
         <View style={styles.card}>
           <View style={styles.rowBetween}>
@@ -253,18 +351,19 @@ export const LoanDetailScreen = ({ route, navigation }) => {
             </View>
             <Text style={styles.countTag}>{loan.emiDetails?.length || 0} Installments</Text>
           </View>
+          <Text style={styles.scheduleHint}>Tap pencil icon to modify installment date or amount</Text>
 
           <View style={styles.tableHeader}>
-            <Text style={[styles.th, { width: 44 }]}>#</Text>
+            <Text style={[styles.th, { width: 32 }]}>#</Text>
             <Text style={[styles.th, { flex: 1 }]}>Due Date</Text>
             <Text style={[styles.th, { width: 75, textAlign: 'right' }]}>Amount</Text>
-            <Text style={[styles.th, { width: 75, textAlign: 'center' }]}>Status</Text>
-            <Text style={[styles.th, { width: 55, textAlign: 'right' }]}>Action</Text>
+            <Text style={[styles.th, { width: 70, textAlign: 'center' }]}>Status</Text>
+            <Text style={[styles.th, { width: 70, textAlign: 'right' }]}>Actions</Text>
           </View>
 
           {loan.emiDetails?.map((item) => (
             <View key={item.emiNumber} style={styles.tableRow}>
-              <Text style={[styles.td, { width: 44, fontWeight: '700' }]}>{item.emiNumber}</Text>
+              <Text style={[styles.td, { width: 32, fontWeight: '700' }]}>{item.emiNumber}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.tdDate}>{item.emiDate}</Text>
                 {item.paidDate ? <Text style={styles.tdPaidOn}>Paid {item.paidDate}</Text> : null}
@@ -272,7 +371,7 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               <Text style={[styles.td, { width: 75, textAlign: 'right', fontWeight: '700' }]}>
                 {formatCurrency(item.emiAmount)}
               </Text>
-              <View style={{ width: 75, alignItems: 'center' }}>
+              <View style={{ width: 70, alignItems: 'center' }}>
                 <View
                   style={[
                     styles.statusPill,
@@ -297,7 +396,15 @@ export const LoanDetailScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
               </View>
-              <View style={{ width: 55, alignItems: 'flex-end' }}>
+              <View style={{ width: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                <TouchableOpacity
+                  style={styles.editEmiIconBtn}
+                  onPress={() => handleOpenEditEmi(item)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="pencil-outline" size={15} color={colors.primary} />
+                </TouchableOpacity>
+
                 {item.status !== 'Paid' ? (
                   <TouchableOpacity
                     style={styles.miniPayBtn}
@@ -307,7 +414,7 @@ export const LoanDetailScreen = ({ route, navigation }) => {
                     <Text style={styles.miniPayText}>Pay</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Ionicons name="checkmark-done" size={18} color={colors.success} />
+                  <Ionicons name="checkmark-done" size={17} color={colors.success} />
                 )}
               </View>
             </View>
@@ -321,6 +428,14 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         emi={selectedEmi}
         onClose={() => setModalVisible(false)}
         onConfirm={handleConfirmPayment}
+      />
+
+      {/* Edit EMI Modal */}
+      <EditEmiModal
+        visible={editEmiModalVisible}
+        emi={editingEmi}
+        onClose={() => setEditEmiModalVisible(false)}
+        onSave={handleSaveEmi}
       />
     </View>
   );
@@ -336,10 +451,51 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerEditBtn: {
+    padding: 6,
+  },
   scrollContent: {
     padding: spacing.md,
     paddingBottom: 40,
     gap: spacing.md,
+  },
+  managementBar: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  actionBtnSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  actionBtnSecondaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  actionBtnDanger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  actionBtnDangerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.error,
   },
   card: {
     backgroundColor: colors.cardBg,
@@ -415,7 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
   cardHeaderTitle: {
     fontSize: 15,
@@ -425,6 +581,11 @@ const styles = StyleSheet.create({
   countTag: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  scheduleHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
   },
   grid2: {
     flexDirection: 'row',
@@ -545,9 +706,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textSecondary,
   },
+  editEmiIconBtn: {
+    padding: 4,
+    backgroundColor: '#eff6ff',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
   miniPayBtn: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },

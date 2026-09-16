@@ -12,7 +12,7 @@ export const PaymentService = {
   /**
    * Pay an EMI via POST /api/payment/payments/pay/{fileNumber}
    */
-  async payEMI(fileNumber, emiNumber, amount, date, mode = 'UPI', notes = '') {
+  async payEMI(fileNumber, emiNumber, amount, date, mode = 'UPI', notes = '', options = {}) {
     const cleanFileNumber = parseInt(String(fileNumber).replace(/\D/g, ''), 10);
     const paymentDate = date || new Date().toISOString().split('T')[0];
 
@@ -24,6 +24,7 @@ export const PaymentService = {
           emiNumber: parseInt(emiNumber, 10),
           paymentAmount: parseFloat(amount),
           paymentDate: paymentDate,
+          notes: `${notes || ''}${options.agentName ? ` [Agent: ${options.agentName}]` : ''}${options.penaltyCollected ? ` [Late Fee: ₹${options.penaltyCollected}]` : ''}`.trim(),
         });
       }
     } catch (err) {
@@ -31,7 +32,7 @@ export const PaymentService = {
     }
 
     // Always keep local store in sync
-    return VehicleFinanceStore.payEMI(fileNumber, emiNumber, amount, paymentDate, mode, notes);
+    return VehicleFinanceStore.payEMI(fileNumber, emiNumber, amount, paymentDate, mode, notes, options);
   },
 
   /**

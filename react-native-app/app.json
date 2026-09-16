@@ -38,6 +38,10 @@
         "projectId": "e05e6a95-1532-46d2-86a9-4e6d3f1da6bd"
       }
     },
-    "owner": "kiran040595"
+    "owner": "kiran040595",
+    "plugins": [
+      "expo-font",
+      "expo-status-bar"
+    ]
   }
 }

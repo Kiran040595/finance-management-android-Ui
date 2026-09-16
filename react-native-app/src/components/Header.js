@@ -17,7 +17,21 @@ export const Header = ({ title, subtitle, showBack, onBack, rightAction }) => {
           <Text style={styles.title} numberOfLines={1}>{title}</Text>
           {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
         </View>
-        {rightAction ? <View style={styles.rightAction}>{rightAction}</View> : null}
+        {rightAction ? (
+          <View style={styles.rightAction}>
+            {React.isValidElement(rightAction) ? (
+              rightAction
+            ) : rightAction.icon ? (
+              <TouchableOpacity
+                style={{ padding: spacing.xs }}
+                onPress={rightAction.onPress}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={rightAction.icon} size={22} color="#ffffff" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </View>
   );

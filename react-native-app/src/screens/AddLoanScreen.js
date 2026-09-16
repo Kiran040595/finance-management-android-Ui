@@ -48,15 +48,20 @@ export const AddLoanScreen = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // Auto-calculate EMI in real-time
+  // Auto-calculate Flat EMI in real-time
+  // Formula: Total Interest = P * (R / 100) * (N / 12)
+  // Total Amount = P + Total Interest
+  // EMI = Total Amount / N
   const calculatedEmi = useMemo(() => {
     const P = parseFloat(loanAmount || 0);
-    const R = parseFloat(interestRate || 0) / 12 / 100;
+    const R = parseFloat(interestRate || 0);
     const N = parseInt(tenure || 12, 10);
     if (P <= 0 || N <= 0) return 0;
-    if (R === 0) return Math.round(P / N);
-    const emi = (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
-    return Math.round(emi);
+    if (R === 0) return Math.round((P / N) * 100) / 100;
+    const totalInterest = P * (R / 100) * (N / 12);
+    const totalPayable = P + totalInterest;
+    const emi = totalPayable / N;
+    return Math.round(emi * 100) / 100;
   }, [loanAmount, interestRate, tenure]);
 
   // Auto-calculate suggested loan amount from vehicle cost - downpayment
@@ -104,6 +109,8 @@ export const AddLoanScreen = ({ navigation }) => {
         loanAmount: parseFloat(loanAmount),
         interestRate: parseFloat(interestRate || 10),
         tenure: parseInt(tenure || 12, 10),
+        emi: calculatedEmi,
+        emiAmount: calculatedEmi,
         guarantorName: guarantorName.trim(),
         guarantorPhone: guarantorPhone.trim(),
         guarantorRelation: guarantorRelation.trim(),

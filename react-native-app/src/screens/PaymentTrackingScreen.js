@@ -26,7 +26,7 @@ export const PaymentTrackingScreen = ({ navigation }) => {
 
   const loadData = useCallback(async () => {
     try {
-      const txns = VehicleFinanceStore.getTransactions();
+      const txns = await PaymentTrackingService.getTransactions();
       setTransactions(txns || []);
     } catch (e) {
       console.error('Error fetching transactions:', e);
@@ -175,10 +175,11 @@ export const PaymentTrackingScreen = ({ navigation }) => {
       <Header
         title="Transaction Ledger"
         subtitle="Payment inflows, disbursements & audit trail"
-        rightAction={{
-          icon: 'share-social-outline',
-          onPress: handleShareStatement,
-        }}
+        rightAction={
+          <TouchableOpacity onPress={handleShareStatement} activeOpacity={0.7} style={{ padding: 4 }}>
+            <Ionicons name="share-social-outline" size={22} color="#ffffff" />
+          </TouchableOpacity>
+        }
       />
 
       {/* Top Metrics Banner */}

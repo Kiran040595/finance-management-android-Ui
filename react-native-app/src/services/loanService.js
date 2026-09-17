@@ -1,5 +1,6 @@
 import apiClient from './apiClient';
 import VehicleFinanceStore from './vehicleFinanceStore';
+import { processLoanPhotosForUpload } from './supabaseStorageService';
 
 export const LoanService = {
   /**
@@ -30,6 +31,8 @@ export const LoanService = {
           remainingEmi: l.remainingEmi != null ? l.remainingEmi : (l.tenure || 36) - (l.paidEmiCount || 0),
           status: l.status === false ? 'Closed' : 'Active',
           insuranceExpiryDate: l.insuranceExpiryDate || '',
+          customerPhoto: l.customerPhotoUrl || null,
+          customerPhotoUrl: l.customerPhotoUrl || null,
         }));
       }
     } catch (err) {
@@ -86,6 +89,17 @@ export const LoanService = {
           paymentMode: emi.paymentMode || 'UPI',
         }));
 
+        let parsedVehiclePhotos = [];
+        if (Array.isArray(loanDetails.vehiclePhotos)) {
+          parsedVehiclePhotos = loanDetails.vehiclePhotos;
+        } else if (typeof loanDetails.vehiclePhotoUrls === 'string') {
+          try {
+            parsedVehiclePhotos = JSON.parse(loanDetails.vehiclePhotoUrls);
+          } catch {
+            parsedVehiclePhotos = loanDetails.vehiclePhotoUrls.split(',').map((s) => s.trim()).filter(Boolean);
+          }
+        }
+
         return {
           id: String(loanDetails.fileNumber || id),
           fileNumber: String(loanDetails.fileNumber || id),
@@ -94,10 +108,22 @@ export const LoanService = {
           customerPhoneSecondary: loanDetails.customerPhoneSecondary || '',
           customerEmail: loanDetails.customerEmail || '',
           customerAddress: loanDetails.customerFullAddress || '',
+          customerAadhaarNumber: loanDetails.customerAadhaarNumber || '',
+          customerFatherName: loanDetails.customerFatherName || '',
+          customerPhoto: loanDetails.customerPhotoUrl || null,
+          customerPhotoUrl: loanDetails.customerPhotoUrl || null,
           vehicleType: loanDetails.vehicleType || 'Car / Four Wheeler',
           vehicleMake: loanDetails.vehicleMake || '',
           vehicleModel: loanDetails.vehicleModel || (loanDetails.vehicleModelYear ? `Model ${loanDetails.vehicleModelYear}` : 'Vehicle'),
+          vehicleModelYear: loanDetails.vehicleModelYear || null,
           vehicleNumber: loanDetails.vehicleNumber,
+          insuranceExpiryDate: loanDetails.vehicleInsuranceExpiryDate || loanDetails.insuranceExpiryDate || '',
+          vehiclePhotos: parsedVehiclePhotos,
+          vehiclePhotoUrls: loanDetails.vehiclePhotoUrls || null,
+          rcPhoto: loanDetails.rcPhotoUrl || null,
+          rcPhotoUrl: loanDetails.rcPhotoUrl || null,
+          insurancePhoto: loanDetails.insurancePhotoUrl || null,
+          insurancePhotoUrl: loanDetails.insurancePhotoUrl || null,
           loanAmount: Number(loanDetails.loanAmount || 0),
           interestRate: Number(loanDetails.interestRate || 10.5),
           tenure: Number(loanDetails.tenure || 36),
@@ -108,8 +134,14 @@ export const LoanService = {
           remainingEmi: paymentDetails?.remainingEmi != null ? paymentDetails.remainingEmi : (loanDetails.tenure || 36),
           guarantorName: loanDetails.guarantorName || '',
           guarantorPhone: loanDetails.guarantorPhonePrimary || '',
+          guarantorPhonePrimary: loanDetails.guarantorPhonePrimary || '',
+          guarantorPhoneSecondary: loanDetails.guarantorPhoneSecondary || '',
           guarantorRelation: loanDetails.guarantorRelation || '',
           guarantorAddress: loanDetails.guarantorFullAddress || '',
+          guarantorFullAddress: loanDetails.guarantorFullAddress || '',
+          guarantorAadhaarNumber: loanDetails.guarantorAadhaarNumber || '',
+          guarantorPhoto: loanDetails.guarantorPhotoUrl || null,
+          guarantorPhotoUrl: loanDetails.guarantorPhotoUrl || null,
           emiDetails: emiList,
         };
       }
@@ -123,31 +155,44 @@ export const LoanService = {
    * Create a new loan via POST /api/loan
    */
   async createLoan(loanData) {
+    // 1. Process & upload any local captured photos to Supabase Cloud Storage
+    let processedData = loanData;
+    try {
+      processedData = await processLoanPhotosForUpload(loanData);
+    } catch (photoErr) {
+      console.warn('Supabase photo upload warning during createLoan:', photoErr);
+    }
+
     // Generate clean numeric fileNumber if not given
-    const generatedFileNum = loanData.fileNumber
-      ? parseInt(String(loanData.fileNumber).replace(/\D/g, ''), 10) || (Date.now() % 1000000)
+    const generatedFileNum = processedData.fileNumber
+      ? parseInt(String(processedData.fileNumber).replace(/\D/g, ''), 10) || (Date.now() % 1000000)
       : Math.floor(100000 + Math.random() * 900000);
 
     const payload = {
-      customerName: loanData.customerName,
-      customerPhonePrimary: loanData.customerPhone || loanData.customerPhonePrimary,
-      customerPhoneSecondary: loanData.customerPhone2 || loanData.customerPhoneSecondary || '',
-      customerFullAddress: loanData.customerAddress || loanData.customerFullAddress || '',
-      customerFatherName: loanData.customerFatherName || '',
-      customerAadhaarNumber: loanData.customerAadhaarNumber || '',
-      vehicleNumber: (loanData.vehicleNumber || '').toUpperCase(),
-      vehicleModelYear: loanData.vehicleModelYear ? parseInt(loanData.vehicleModelYear, 10) : new Date().getFullYear(),
-      vehicleInsuranceExpiryDate: loanData.insuranceExpiryDate || null,
-      loanAmount: parseFloat(loanData.loanAmount || 0),
-      interestRate: parseFloat(loanData.interestRate || 10.5),
-      tenure: parseInt(loanData.tenure || 36, 10),
-      emi: parseFloat(loanData.emiAmount || loanData.emi || 0),
+      customerName: processedData.customerName,
+      customerPhonePrimary: processedData.customerPhone || processedData.customerPhonePrimary,
+      customerPhoneSecondary: processedData.customerPhone2 || processedData.customerPhoneSecondary || '',
+      customerFullAddress: processedData.customerAddress || processedData.customerFullAddress || '',
+      customerFatherName: processedData.customerFatherName || '',
+      customerAadhaarNumber: processedData.customerAadhaarNumber || '',
+      customerPhotoUrl: processedData.customerPhotoUrl || processedData.customerPhoto || null,
+      vehicleNumber: (processedData.vehicleNumber || '').toUpperCase(),
+      vehicleModelYear: processedData.vehicleModelYear ? parseInt(processedData.vehicleModelYear, 10) : new Date().getFullYear(),
+      vehicleInsuranceExpiryDate: processedData.insuranceExpiryDate || null,
+      vehiclePhotoUrls: processedData.vehiclePhotoUrls || (Array.isArray(processedData.vehiclePhotos) ? JSON.stringify(processedData.vehiclePhotos) : null),
+      rcPhotoUrl: processedData.rcPhotoUrl || processedData.rcPhoto || null,
+      insurancePhotoUrl: processedData.insurancePhotoUrl || processedData.insurancePhoto || null,
+      loanAmount: parseFloat(processedData.loanAmount || 0),
+      interestRate: parseFloat(processedData.interestRate || 10.5),
+      tenure: parseInt(processedData.tenure || 36, 10),
+      emi: parseFloat(processedData.emiAmount || processedData.emi || 0),
       fileNumber: generatedFileNum,
-      guarantorName: loanData.guarantorName || '',
-      guarantorPhonePrimary: loanData.guarantorPhone || loanData.guarantorPhonePrimary || '',
-      guarantorPhoneSecondary: loanData.guarantorPhoneSecondary || '',
-      guarantorFullAddress: loanData.guarantorAddress || loanData.guarantorFullAddress || '',
-      guarantorAadhaarNumber: loanData.guarantorAadhaarNumber || '',
+      guarantorName: processedData.guarantorName || '',
+      guarantorPhonePrimary: processedData.guarantorPhone || processedData.guarantorPhonePrimary || '',
+      guarantorPhoneSecondary: processedData.guarantorPhoneSecondary || '',
+      guarantorFullAddress: processedData.guarantorAddress || processedData.guarantorFullAddress || '',
+      guarantorAadhaarNumber: processedData.guarantorAadhaarNumber || '',
+      guarantorPhotoUrl: processedData.guarantorPhotoUrl || processedData.guarantorPhoto || null,
       loanCreationDate: new Date(),
     };
 
@@ -160,7 +205,7 @@ export const LoanService = {
 
     // Also persist in local store for seamless offline/cache experience
     const localLoan = await VehicleFinanceStore.createLoan({
-      ...loanData,
+      ...processedData,
       fileNumber: String(generatedFileNum),
     });
 
@@ -194,28 +239,41 @@ export const LoanService = {
    * Update loan details via PUT /api/loan/{fileNumber}
    */
   async updateLoan(fileNumber, loanData) {
+    // 1. Process & upload any local captured photos to Supabase Cloud Storage
+    let processedData = loanData;
+    try {
+      processedData = await processLoanPhotosForUpload(loanData);
+    } catch (photoErr) {
+      console.warn('Supabase photo upload warning during updateLoan:', photoErr);
+    }
+
     const cleanFileNumber = parseInt(String(fileNumber).replace(/\D/g, ''), 10) || fileNumber;
 
     const payload = {
       fileNumber: cleanFileNumber,
-      customerName: loanData.customerName,
-      customerPhonePrimary: loanData.customerPhone || loanData.customerPhonePrimary,
-      customerPhoneSecondary: loanData.customerPhone2 || loanData.customerPhoneSecondary || '',
-      customerFullAddress: loanData.customerAddress || loanData.customerFullAddress || '',
-      customerFatherName: loanData.customerFatherName || '',
-      customerAadhaarNumber: loanData.customerAadhaarNumber || '',
-      vehicleNumber: (loanData.vehicleNumber || '').toUpperCase(),
-      vehicleModelYear: loanData.vehicleModelYear ? parseInt(loanData.vehicleModelYear, 10) : new Date().getFullYear(),
-      vehicleInsuranceExpiryDate: loanData.insuranceExpiryDate || null,
-      loanAmount: parseFloat(loanData.loanAmount || 0),
-      interestRate: parseFloat(loanData.interestRate || 10.5),
-      tenure: parseInt(loanData.tenure || 12, 10),
-      emi: parseFloat(loanData.emiAmount || loanData.emi || 0),
-      guarantorName: loanData.guarantorName || '',
-      guarantorPhonePrimary: loanData.guarantorPhone || loanData.guarantorPhonePrimary || '',
-      guarantorPhoneSecondary: loanData.guarantorPhoneSecondary || '',
-      guarantorFullAddress: loanData.guarantorAddress || loanData.guarantorFullAddress || '',
-      guarantorAadhaarNumber: loanData.guarantorAadhaarNumber || '',
+      customerName: processedData.customerName,
+      customerPhonePrimary: processedData.customerPhone || processedData.customerPhonePrimary,
+      customerPhoneSecondary: processedData.customerPhone2 || processedData.customerPhoneSecondary || '',
+      customerFullAddress: processedData.customerAddress || processedData.customerFullAddress || '',
+      customerFatherName: processedData.customerFatherName || '',
+      customerAadhaarNumber: processedData.customerAadhaarNumber || '',
+      customerPhotoUrl: processedData.customerPhotoUrl || processedData.customerPhoto || null,
+      vehicleNumber: (processedData.vehicleNumber || '').toUpperCase(),
+      vehicleModelYear: processedData.vehicleModelYear ? parseInt(processedData.vehicleModelYear, 10) : new Date().getFullYear(),
+      vehicleInsuranceExpiryDate: processedData.insuranceExpiryDate || null,
+      vehiclePhotoUrls: processedData.vehiclePhotoUrls || (Array.isArray(processedData.vehiclePhotos) ? JSON.stringify(processedData.vehiclePhotos) : null),
+      rcPhotoUrl: processedData.rcPhotoUrl || processedData.rcPhoto || null,
+      insurancePhotoUrl: processedData.insurancePhotoUrl || processedData.insurancePhoto || null,
+      loanAmount: parseFloat(processedData.loanAmount || 0),
+      interestRate: parseFloat(processedData.interestRate || 10.5),
+      tenure: parseInt(processedData.tenure || 12, 10),
+      emi: parseFloat(processedData.emiAmount || processedData.emi || 0),
+      guarantorName: processedData.guarantorName || '',
+      guarantorPhonePrimary: processedData.guarantorPhone || processedData.guarantorPhonePrimary || '',
+      guarantorPhoneSecondary: processedData.guarantorPhoneSecondary || '',
+      guarantorFullAddress: processedData.guarantorAddress || processedData.guarantorFullAddress || '',
+      guarantorAadhaarNumber: processedData.guarantorAadhaarNumber || '',
+      guarantorPhotoUrl: processedData.guarantorPhotoUrl || processedData.guarantorPhoto || null,
     };
 
     try {
@@ -224,7 +282,7 @@ export const LoanService = {
       console.warn('Backend loan update notice:', err.message);
     }
 
-    return VehicleFinanceStore.updateLoan(fileNumber, loanData);
+    return VehicleFinanceStore.updateLoan(fileNumber, processedData);
   },
 
   /**

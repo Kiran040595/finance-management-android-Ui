@@ -138,7 +138,17 @@ export const LoanDetailScreen = ({ route, navigation }) => {
 
   const percentPaid = Math.round(((loan.paidEmiCount || 0) / (loan.tenure || 1)) * 100);
   const rupeeRate = ((loan.interestRate || 24) / 12).toFixed(2);
-  const vehiclePhotosList = Array.isArray(loan.vehiclePhotos) ? loan.vehiclePhotos : [];
+  const vehiclePhotosList = Array.isArray(loan.vehiclePhotos)
+    ? loan.vehiclePhotos
+    : typeof loan.vehiclePhotoUrls === 'string'
+    ? (() => {
+        try {
+          return JSON.parse(loan.vehiclePhotoUrls);
+        } catch {
+          return loan.vehiclePhotoUrls.split(',').map((s) => s.trim()).filter(Boolean);
+        }
+      })()
+    : [];
 
   return (
     <View style={styles.container}>
@@ -193,8 +203,8 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-              {loan.customerPhoto ? (
-                <Image source={{ uri: loan.customerPhoto }} style={styles.customerAvatar} />
+              {(loan.customerPhoto || loan.customerPhotoUrl) ? (
+                <Image source={{ uri: loan.customerPhoto || loan.customerPhotoUrl }} style={styles.customerAvatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={24} color={colors.primary} />
@@ -312,8 +322,8 @@ export const LoanDetailScreen = ({ route, navigation }) => {
           <View style={styles.docsRow}>
             <View style={styles.docBox}>
               <Text style={styles.docBoxTitle}>RC Document</Text>
-              {loan.rcPhoto ? (
-                <Image source={{ uri: loan.rcPhoto }} style={styles.docImage} resizeMode="cover" />
+              {(loan.rcPhoto || loan.rcPhotoUrl) ? (
+                <Image source={{ uri: loan.rcPhoto || loan.rcPhotoUrl }} style={styles.docImage} resizeMode="cover" />
               ) : (
                 <View style={styles.docPlaceholder}>
                   <Ionicons name="document-text-outline" size={24} color={colors.textMuted} />
@@ -324,8 +334,8 @@ export const LoanDetailScreen = ({ route, navigation }) => {
 
             <View style={styles.docBox}>
               <Text style={styles.docBoxTitle}>Insurance Policy</Text>
-              {loan.insurancePhoto ? (
-                <Image source={{ uri: loan.insurancePhoto }} style={styles.docImage} resizeMode="cover" />
+              {(loan.insurancePhoto || loan.insurancePhotoUrl) ? (
+                <Image source={{ uri: loan.insurancePhoto || loan.insurancePhotoUrl }} style={styles.docImage} resizeMode="cover" />
               ) : (
                 <View style={styles.docPlaceholder}>
                   <Ionicons name="shield-outline" size={24} color={colors.textMuted} />
@@ -361,29 +371,23 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               <Text style={[styles.valBold, { color: '#0f766e', fontSize: 16 }]}>{formatCurrency(loan.emiAmount)}</Text>
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.label}>DOWN PAYMENT</Text>
-              <Text style={styles.valText}>{formatCurrency(loan.downPayment)}</Text>
+              <Text style={styles.label}>PAID / REMAINING</Text>
+              <Text style={styles.valBold}>{loan.paidEmiCount || 0} / {loan.remainingEmi || 0}</Text>
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.label}>DISBURSED ON</Text>
-              <Text style={styles.valText}>{loan.disbursedDate || 'N/A'}</Text>
+              <Text style={styles.label}>DISBURSED</Text>
+              <Text style={styles.valText}>{loan.disbursedDate ? loan.disbursedDate.split('T')[0] : 'N/A'}</Text>
             </View>
           </View>
 
           {/* Progress Bar */}
           <View style={styles.progressSection}>
-            <View style={styles.rowBetween}>
-              <Text style={styles.progressLabel}>
-                Repayment: {loan.paidEmiCount} of {loan.tenure} EMIs completed
-              </Text>
-              <Text style={styles.progressPercent}>{percentPaid}%</Text>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressLabel}>REPAYMENT PROGRESS</Text>
+              <Text style={styles.progressVal}>{percentPaid}% Completed</Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${percentPaid}%` }]} />
-            </View>
-            <View style={[styles.rowBetween, { marginTop: 6 }]}>
-              <Text style={styles.miniDetail}>Principal Paid: {formatCurrency(loan.totalPrincipalPaid)}</Text>
-              <Text style={styles.miniDetail}>Interest Paid: {formatCurrency(loan.totalInterestPaid)}</Text>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${Math.min(100, percentPaid)}%` }]} />
             </View>
           </View>
         </View>
@@ -396,8 +400,8 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               <Text style={styles.cardHeaderTitle}>Guarantor Information</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: spacing.sm }}>
-              {loan.guarantorPhoto ? (
-                <Image source={{ uri: loan.guarantorPhoto }} style={styles.guarantorAvatar} />
+              {(loan.guarantorPhoto || loan.guarantorPhotoUrl) ? (
+                <Image source={{ uri: loan.guarantorPhoto || loan.guarantorPhotoUrl }} style={styles.guarantorAvatar} />
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: '#ecfdf5' }]}>
                   <Ionicons name="person-outline" size={22} color="#059669" />

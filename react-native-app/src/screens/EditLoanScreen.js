@@ -38,7 +38,7 @@ export const EditLoanScreen = ({ route, navigation }) => {
   const [customerAddress, setCustomerAddress] = useState(loan.customerAddress || '');
   const [customerFatherName, setCustomerFatherName] = useState(loan.customerFatherName || '');
   const [customerAadhaar, setCustomerAadhaar] = useState(loan.customerAadhaarNumber || '');
-  const [customerPhoto, setCustomerPhoto] = useState(loan.customerPhoto || null);
+  const [customerPhoto, setCustomerPhoto] = useState(loan.customerPhoto || loan.customerPhotoUrl || null);
 
   // Vehicle Info
   const [vehicleType, setVehicleType] = useState(loan.vehicleType || 'Car / Four Wheeler');
@@ -50,16 +50,26 @@ export const EditLoanScreen = ({ route, navigation }) => {
   const [chassisNumber, setChassisNumber] = useState(loan.chassisNumber || '');
   const [insuranceExpiry, setInsuranceExpiry] = useState(loan.insuranceExpiryDate || '');
   // Vehicle Photos & Documents
-  const [vehiclePhotos, setVehiclePhotos] = useState(Array.isArray(loan.vehiclePhotos) ? loan.vehiclePhotos : []);
-  const [rcPhoto, setRcPhoto] = useState(loan.rcPhoto || null);
-  const [insurancePhoto, setInsurancePhoto] = useState(loan.insurancePhoto || null);
+  const [vehiclePhotos, setVehiclePhotos] = useState(() => {
+    if (Array.isArray(loan.vehiclePhotos)) return loan.vehiclePhotos;
+    if (typeof loan.vehiclePhotoUrls === 'string') {
+      try {
+        return JSON.parse(loan.vehiclePhotoUrls);
+      } catch {
+        return loan.vehiclePhotoUrls.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    return [];
+  });
+  const [rcPhoto, setRcPhoto] = useState(loan.rcPhoto || loan.rcPhotoUrl || null);
+  const [insurancePhoto, setInsurancePhoto] = useState(loan.insurancePhoto || loan.insurancePhotoUrl || null);
 
   // Guarantor Info
   const [guarantorName, setGuarantorName] = useState(loan.guarantorName || '');
-  const [guarantorPhone, setGuarantorPhone] = useState(loan.guarantorPhone || '');
+  const [guarantorPhone, setGuarantorPhone] = useState(loan.guarantorPhone || loan.guarantorPhonePrimary || '');
   const [guarantorRelation, setGuarantorRelation] = useState(loan.guarantorRelation || '');
-  const [guarantorAddress, setGuarantorAddress] = useState(loan.guarantorAddress || '');
-  const [guarantorPhoto, setGuarantorPhoto] = useState(loan.guarantorPhoto || null);
+  const [guarantorAddress, setGuarantorAddress] = useState(loan.guarantorAddress || loan.guarantorFullAddress || '');
+  const [guarantorPhoto, setGuarantorPhoto] = useState(loan.guarantorPhoto || loan.guarantorPhotoUrl || null);
 
   const [loading, setLoading] = useState(false);
 

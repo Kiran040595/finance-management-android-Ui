@@ -21,6 +21,7 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
 import CustomerPassbookScreen from '../screens/CustomerPassbookScreen';
+import MonthlyPnLScreen from '../screens/MonthlyPnLScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -171,6 +172,11 @@ export function AppNavigator() {
       <Stack.Screen
         name="CustomerPassbook"
         component={CustomerPassbookScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="MonthlyPnL"
+        component={MonthlyPnLScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

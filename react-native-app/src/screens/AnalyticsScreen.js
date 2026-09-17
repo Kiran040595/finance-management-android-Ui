@@ -383,6 +383,22 @@ export const AnalyticsScreen = ({ navigation }) => {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#ffffff" />
             </TouchableOpacity>
+
+            {/* Quick Actions to Monthly P&L & Cash Flow */}
+            <TouchableOpacity
+              style={styles.pnlBanner}
+              onPress={() => navigation.navigate('MonthlyPnL')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.bannerIcon, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
+                <Ionicons name="trending-up" size={24} color="#ffffff" />
+              </View>
+              <View style={styles.bannerInfo}>
+                <Text style={styles.bannerTitle}>Monthly P&L & Cash Flow</Text>
+                <Text style={styles.bannerSub}>Pure interest profits, operational expenses & net liquidity</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ffffff" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -449,6 +465,22 @@ export const AnalyticsScreen = ({ navigation }) => {
                 })
               )}
             </View>
+
+            {/* Deep Dive Action Card */}
+            <TouchableOpacity
+              style={styles.pnlBanner}
+              onPress={() => navigation.navigate('MonthlyPnL')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.bannerIcon, { backgroundColor: 'rgba(255, 255, 255, 0.22)' }]}>
+                <Ionicons name="calculator-outline" size={24} color="#ffffff" />
+              </View>
+              <View style={styles.bannerInfo}>
+                <Text style={styles.bannerTitle}>Detailed P&L & Cash Flow Deep Dive</Text>
+                <Text style={styles.bannerSub}>Pure interest vs principal separation, expenses & forecast</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#ffffff" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -807,6 +839,14 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginTop: spacing.xs,
+  },
+  pnlBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#047857',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
   },
   bannerIcon: {
     width: 42,

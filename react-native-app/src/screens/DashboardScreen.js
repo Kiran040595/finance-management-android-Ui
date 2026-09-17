@@ -194,6 +194,31 @@ export const DashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Monthly P&L & Cash Flow Forecast Banner */}
+        <TouchableOpacity
+          style={styles.pnlBannerCard}
+          onPress={() => navigation.navigate('MonthlyPnL')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.pnlBannerLeft}>
+            <View style={styles.pnlIconCircle}>
+              <Ionicons name="trending-up" size={24} color="#ffffff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.pnlBannerTitle}>Monthly P&L & Cash Flow</Text>
+                <View style={styles.pnlBadge}>
+                  <Text style={styles.pnlBadgeText}>PROFIT BI</Text>
+                </View>
+              </View>
+              <Text style={styles.pnlBannerSubtitle}>
+                Realized interest profit, operational expenses & monthly cash flow forecast
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#059669" />
+        </TouchableOpacity>
+
         {/* Quick Action Navigation Grid */}
         <Text style={styles.sectionHeading}>Operations & Quick Actions</Text>
         <View style={styles.actionsGrid}>
@@ -354,6 +379,60 @@ const styles = StyleSheet.create({
   },
   kpiCol: {
     flex: 1,
+  },
+  pnlBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  pnlBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  pnlIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pnlBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#065f46',
+  },
+  pnlBadge: {
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+  },
+  pnlBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  pnlBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   sectionHeading: {
     fontSize: 16,

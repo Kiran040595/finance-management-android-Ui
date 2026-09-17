@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
@@ -136,11 +137,13 @@ export const LoanDetailScreen = ({ route, navigation }) => {
   }
 
   const percentPaid = Math.round(((loan.paidEmiCount || 0) / (loan.tenure || 1)) * 100);
+  const rupeeRate = ((loan.interestRate || 24) / 12).toFixed(2);
+  const vehiclePhotosList = Array.isArray(loan.vehiclePhotos) ? loan.vehiclePhotos : [];
 
   return (
     <View style={styles.container}>
       <Header
-        title={loan.fileNumber}
+        title={`File #${loan.fileNumber}`}
         subtitle={`${loan.customerName} • ${loan.vehicleModel}`}
         showBack
         onBack={() => navigation.goBack()}
@@ -186,12 +189,24 @@ export const LoanDetailScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Status & Highlights Card */}
+        {/* Status & Borrower Card */}
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <View>
-              <Text style={styles.label}>BORROWER</Text>
-              <Text style={styles.mainTitle}>{loan.customerName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              {loan.customerPhoto ? (
+                <Image source={{ uri: loan.customerPhoto }} style={styles.customerAvatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={24} color={colors.primary} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>BORROWER (FILE #{loan.fileNumber})</Text>
+                <Text style={styles.mainTitle}>{loan.customerName}</Text>
+                {loan.customerFatherName ? (
+                  <Text style={styles.subText}>S/o {loan.customerFatherName}</Text>
+                ) : null}
+              </View>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: loan.status === 'Active' ? '#dcfce7' : '#f1f5f9' }]}>
               <Text style={[styles.statusText, { color: loan.status === 'Active' ? '#15803d' : '#64748b' }]}>
@@ -243,11 +258,21 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               <Text style={[styles.valBold, { fontFamily: 'monospace' }]}>{loan.vehicleNumber}</Text>
             </View>
             <View style={styles.gridItem}>
+              <Text style={styles.label}>MODEL YEAR</Text>
+              <Text style={styles.valBold}>{loan.vehicleModelYear || 'N/A'}</Text>
+            </View>
+            <View style={styles.gridItem}>
+              <Text style={styles.label}>INSURANCE EXPIRY</Text>
+              <Text style={[styles.valBold, { color: loan.insuranceExpiryDate ? '#b45309' : colors.textPrimary }]}>
+                {loan.insuranceExpiryDate || 'Not Available'}
+              </Text>
+            </View>
+            <View style={styles.gridItem}>
               <Text style={styles.label}>VEHICLE TYPE</Text>
               <Text style={styles.valText}>{loan.vehicleType}</Text>
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.label}>VEHICLE ON-ROAD COST</Text>
+              <Text style={styles.label}>ON-ROAD COST</Text>
               <Text style={styles.valText}>{formatCurrency(loan.vehicleCost)}</Text>
             </View>
             <View style={styles.gridItem}>
@@ -261,27 +286,78 @@ export const LoanDetailScreen = ({ route, navigation }) => {
           </View>
         </View>
 
+        {/* Vehicle Photos & KYC Documents Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="images" size={18} color={colors.primary} />
+            <Text style={styles.cardHeaderTitle}>Vehicle Photos & Documents</Text>
+          </View>
+
+          {/* Vehicle Photos Preview */}
+          <Text style={styles.docLabel}>Vehicle Photos ({vehiclePhotosList.length} Photos)</Text>
+          {vehiclePhotosList.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
+              {vehiclePhotosList.map((uri, idx) => (
+                <View key={idx} style={styles.photoThumbWrapper}>
+                  <Image source={{ uri }} style={styles.photoThumb} resizeMode="cover" />
+                  <Text style={styles.photoCaption}>Photo #{idx + 1}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.noPhotosText}>No vehicle photos uploaded yet.</Text>
+          )}
+
+          {/* Document Thumbnails: RC & Insurance */}
+          <View style={styles.docsRow}>
+            <View style={styles.docBox}>
+              <Text style={styles.docBoxTitle}>RC Document</Text>
+              {loan.rcPhoto ? (
+                <Image source={{ uri: loan.rcPhoto }} style={styles.docImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.docPlaceholder}>
+                  <Ionicons name="document-text-outline" size={24} color={colors.textMuted} />
+                  <Text style={styles.docPlaceholderText}>No RC uploaded</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.docBox}>
+              <Text style={styles.docBoxTitle}>Insurance Policy</Text>
+              {loan.insurancePhoto ? (
+                <Image source={{ uri: loan.insurancePhoto }} style={styles.docImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.docPlaceholder}>
+                  <Ionicons name="shield-outline" size={24} color={colors.textMuted} />
+                  <Text style={styles.docPlaceholderText}>No Policy uploaded</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
         {/* Loan Financial Structure */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="cash" size={18} color={colors.primary} />
-            <Text style={styles.cardHeaderTitle}>Loan Terms & Financials</Text>
+            <Text style={styles.cardHeaderTitle}>Loan Terms & Flat Rate EMI</Text>
           </View>
           <View style={styles.grid3}>
             <View style={styles.gridItem}>
               <Text style={styles.label}>LOAN SANCTIONED</Text>
-              <Text style={[styles.valBold, { color: colors.primary }]}>{formatCurrency(loan.loanAmount)}</Text>
+              <Text style={[styles.valBold, { color: colors.primary, fontSize: 16 }]}>{formatCurrency(loan.loanAmount)}</Text>
             </View>
             <View style={styles.gridItem}>
               <Text style={styles.label}>INTEREST RATE</Text>
               <Text style={styles.valBold}>{loan.interestRate}% p.a.</Text>
+              <Text style={styles.rupeeTag}>₹{rupeeRate} Rs/mo</Text>
             </View>
             <View style={styles.gridItem}>
               <Text style={styles.label}>TENURE</Text>
               <Text style={styles.valBold}>{loan.tenure} Months</Text>
             </View>
             <View style={styles.gridItem}>
-              <Text style={styles.label}>MONTHLY EMI</Text>
+              <Text style={styles.label}>MONTHLY FLAT EMI</Text>
               <Text style={[styles.valBold, { color: '#0f766e', fontSize: 16 }]}>{formatCurrency(loan.emiAmount)}</Text>
             </View>
             <View style={styles.gridItem}>
@@ -319,15 +395,21 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               <Ionicons name="shield-checkmark" size={18} color="#059669" />
               <Text style={styles.cardHeaderTitle}>Guarantor Information</Text>
             </View>
-            <View style={styles.grid2}>
-              <View style={styles.gridItem}>
-                <Text style={styles.label}>NAME</Text>
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: spacing.sm }}>
+              {loan.guarantorPhoto ? (
+                <Image source={{ uri: loan.guarantorPhoto }} style={styles.guarantorAvatar} />
+              ) : (
+                <View style={[styles.avatarPlaceholder, { backgroundColor: '#ecfdf5' }]}>
+                  <Ionicons name="person-outline" size={22} color="#059669" />
+                </View>
+              )}
+              <View>
                 <Text style={styles.valBold}>{loan.guarantorName}</Text>
+                <Text style={styles.subText}>{loan.guarantorRelation || 'Guarantor'}</Text>
               </View>
-              <View style={styles.gridItem}>
-                <Text style={styles.label}>RELATIONSHIP</Text>
-                <Text style={styles.valText}>{loan.guarantorRelation || 'N/A'}</Text>
-              </View>
+            </View>
+
+            <View style={styles.grid2}>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>PHONE</Text>
                 <TouchableOpacity onPress={() => Linking.openURL(`tel:${loan.guarantorPhone}`)}>
@@ -336,7 +418,7 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               </View>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>ADDRESS</Text>
-                <Text style={styles.valText}>{loan.guarantorAddress || 'Same as customer'}</Text>
+                <Text style={styles.valText}>{loan.guarantorAddress || 'Same as borrower'}</Text>
               </View>
             </View>
           </View>
@@ -514,6 +596,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  customerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  guarantorAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    borderColor: '#059669',
+  },
   label: {
     fontSize: 10,
     fontWeight: '700',
@@ -525,6 +631,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
     marginTop: 2,
+  },
+  subText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -610,6 +721,79 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textPrimary,
     marginTop: 2,
+  },
+  rupeeTag: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+    marginTop: 1,
+  },
+  docLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  photosScroll: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  photoThumbWrapper: {
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  photoThumb: {
+    width: 100,
+    height: 75,
+    borderRadius: borderRadius.md,
+    backgroundColor: '#000',
+  },
+  photoCaption: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  noPhotosText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginBottom: spacing.sm,
+  },
+  docsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: spacing.xs,
+  },
+  docBox: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    backgroundColor: '#f8fafc',
+  },
+  docBoxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    padding: 6,
+    backgroundColor: '#f1f5f9',
+  },
+  docImage: {
+    width: '100%',
+    height: 90,
+  },
+  docPlaceholder: {
+    height: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  docPlaceholderText: {
+    fontSize: 10,
+    color: colors.textMuted,
   },
   progressSection: {
     marginTop: spacing.md,

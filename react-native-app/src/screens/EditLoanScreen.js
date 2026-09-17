@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import Header from '../components/Header';
+import ImagePickerField from '../components/ImagePickerField';
 import LoanService from '../services/loanService';
 
 export const EditLoanScreen = ({ route, navigation }) => {
@@ -34,10 +35,10 @@ export const EditLoanScreen = ({ route, navigation }) => {
   const [customerName, setCustomerName] = useState(loan.customerName || '');
   const [customerPhone, setCustomerPhone] = useState(loan.customerPhonePrimary || '');
   const [customerPhone2, setCustomerPhone2] = useState(loan.customerPhoneSecondary || '');
-  const [customerEmail, setCustomerEmail] = useState(loan.customerEmail || '');
   const [customerAddress, setCustomerAddress] = useState(loan.customerAddress || '');
   const [customerFatherName, setCustomerFatherName] = useState(loan.customerFatherName || '');
   const [customerAadhaar, setCustomerAadhaar] = useState(loan.customerAadhaarNumber || '');
+  const [customerPhoto, setCustomerPhoto] = useState(loan.customerPhoto || null);
 
   // Vehicle Info
   const [vehicleType, setVehicleType] = useState(loan.vehicleType || 'Car / Four Wheeler');
@@ -48,12 +49,17 @@ export const EditLoanScreen = ({ route, navigation }) => {
   const [engineNumber, setEngineNumber] = useState(loan.engineNumber || '');
   const [chassisNumber, setChassisNumber] = useState(loan.chassisNumber || '');
   const [insuranceExpiry, setInsuranceExpiry] = useState(loan.insuranceExpiryDate || '');
+  // Vehicle Photos & Documents
+  const [vehiclePhotos, setVehiclePhotos] = useState(Array.isArray(loan.vehiclePhotos) ? loan.vehiclePhotos : []);
+  const [rcPhoto, setRcPhoto] = useState(loan.rcPhoto || null);
+  const [insurancePhoto, setInsurancePhoto] = useState(loan.insurancePhoto || null);
 
   // Guarantor Info
   const [guarantorName, setGuarantorName] = useState(loan.guarantorName || '');
   const [guarantorPhone, setGuarantorPhone] = useState(loan.guarantorPhone || '');
   const [guarantorRelation, setGuarantorRelation] = useState(loan.guarantorRelation || '');
   const [guarantorAddress, setGuarantorAddress] = useState(loan.guarantorAddress || '');
+  const [guarantorPhoto, setGuarantorPhoto] = useState(loan.guarantorPhoto || null);
 
   const [loading, setLoading] = useState(false);
 
@@ -76,10 +82,10 @@ export const EditLoanScreen = ({ route, navigation }) => {
         customerName: customerName.trim(),
         customerPhonePrimary: customerPhone.trim(),
         customerPhoneSecondary: customerPhone2.trim(),
-        customerEmail: customerEmail.trim(),
         customerAddress: customerAddress.trim(),
         customerFatherName: customerFatherName.trim(),
         customerAadhaarNumber: customerAadhaar.trim(),
+        customerPhoto,
         vehicleType,
         vehicleMake: vehicleMake.trim(),
         vehicleModel: vehicleModel.trim(),
@@ -88,11 +94,15 @@ export const EditLoanScreen = ({ route, navigation }) => {
         engineNumber: engineNumber.trim(),
         chassisNumber: chassisNumber.trim(),
         insuranceExpiryDate: insuranceExpiry.trim(),
+        vehiclePhotos,
+        rcPhoto,
+        insurancePhoto,
         guarantorName: guarantorName.trim(),
         guarantorPhone: guarantorPhone.trim(),
         guarantorPhonePrimary: guarantorPhone.trim(),
         guarantorRelation: guarantorRelation.trim(),
         guarantorAddress: guarantorAddress.trim(),
+        guarantorPhoto,
       };
 
       await LoanService.updateLoan(loan.fileNumber || loan.id, updatedData);
@@ -117,7 +127,7 @@ export const EditLoanScreen = ({ route, navigation }) => {
     >
       <Header
         title={`Edit Loan #${loan.fileNumber || loan.id}`}
-        subtitle="Update customer, vehicle & guarantor details"
+        subtitle="Update borrower, vehicle, KYC photos & guarantor"
         showBack
         onBack={() => navigation.goBack()}
       />
@@ -129,6 +139,14 @@ export const EditLoanScreen = ({ route, navigation }) => {
             <Ionicons name="person" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Customer Information</Text>
           </View>
+
+          {/* Customer Photo */}
+          <ImagePickerField
+            label="Customer Photo"
+            sublabel="Tap to capture or upload borrower photo"
+            value={customerPhoto}
+            onChange={setCustomerPhoto}
+          />
 
           <Text style={styles.inputLabel}>Full Name *</Text>
           <TextInput
@@ -161,23 +179,27 @@ export const EditLoanScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>Father's / Spouse Name</Text>
-          <TextInput
-            style={styles.input}
-            value={customerFatherName}
-            onChangeText={setCustomerFatherName}
-            placeholder="Father or Spouse Name"
-          />
-
-          <Text style={styles.inputLabel}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            value={customerEmail}
-            onChangeText={setCustomerEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="email@example.com"
-          />
+          <View style={styles.row}>
+            <View style={styles.halfCol}>
+              <Text style={styles.inputLabel}>Father's / Spouse Name</Text>
+              <TextInput
+                style={styles.input}
+                value={customerFatherName}
+                onChangeText={setCustomerFatherName}
+                placeholder="Father's Name"
+              />
+            </View>
+            <View style={styles.halfCol}>
+              <Text style={styles.inputLabel}>Aadhaar Card No.</Text>
+              <TextInput
+                style={styles.input}
+                value={customerAadhaar}
+                onChangeText={setCustomerAadhaar}
+                keyboardType="numeric"
+                placeholder="12-digit Aadhaar"
+              />
+            </View>
+          </View>
 
           <Text style={styles.inputLabel}>Full Residential Address</Text>
           <TextInput
@@ -187,22 +209,13 @@ export const EditLoanScreen = ({ route, navigation }) => {
             multiline
             placeholder="Door No, Street, Landmark, City"
           />
-
-          <Text style={styles.inputLabel}>Aadhaar Card Number</Text>
-          <TextInput
-            style={styles.input}
-            value={customerAadhaar}
-            onChangeText={setCustomerAadhaar}
-            keyboardType="numeric"
-            placeholder="12-digit Aadhaar"
-          />
         </View>
 
         {/* Section 2: Vehicle Details */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Ionicons name="car-sport" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Vehicle Information</Text>
+            <Text style={styles.sectionTitle}>Vehicle Information & Photos</Text>
           </View>
 
           <Text style={styles.inputLabel}>Vehicle Category</Text>
@@ -243,7 +256,7 @@ export const EditLoanScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.row}>
-            <View style={styles.halfCol}>
+            <View style={[styles.halfCol, { flex: 1.2 }]}>
               <Text style={styles.inputLabel}>Vehicle Reg # *</Text>
               <TextInput
                 style={[styles.input, { fontWeight: '700' }]}
@@ -253,8 +266,8 @@ export const EditLoanScreen = ({ route, navigation }) => {
                 placeholder="AP-31-CJ-9309"
               />
             </View>
-            <View style={styles.halfCol}>
-              <Text style={styles.inputLabel}>Model Year</Text>
+            <View style={[styles.halfCol, { flex: 0.8 }]}>
+              <Text style={styles.inputLabel}>Model Year *</Text>
               <TextInput
                 style={styles.input}
                 value={vehicleModelYear}
@@ -264,6 +277,14 @@ export const EditLoanScreen = ({ route, navigation }) => {
               />
             </View>
           </View>
+
+          <Text style={styles.inputLabel}>Insurance Ending Date (Expiry Date)</Text>
+          <TextInput
+            style={styles.input}
+            value={insuranceExpiry}
+            onChangeText={setInsuranceExpiry}
+            placeholder="YYYY-MM-DD"
+          />
 
           <View style={styles.row}>
             <View style={styles.halfCol}>
@@ -286,12 +307,30 @@ export const EditLoanScreen = ({ route, navigation }) => {
             </View>
           </View>
 
-          <Text style={styles.inputLabel}>Insurance Expiry Date</Text>
-          <TextInput
-            style={styles.input}
-            value={insuranceExpiry}
-            onChangeText={setInsuranceExpiry}
-            placeholder="YYYY-MM-DD"
+          {/* Vehicle Photos */}
+          <ImagePickerField
+            label="Vehicle Photos (2 to 3 Photos)"
+            sublabel="Capture front, side, and rear photos"
+            value={vehiclePhotos}
+            onChange={setVehiclePhotos}
+            multiple={true}
+            maxCount={3}
+          />
+
+          {/* RC Document */}
+          <ImagePickerField
+            label="RC Document Photo"
+            sublabel="Registration certificate snap"
+            value={rcPhoto}
+            onChange={setRcPhoto}
+          />
+
+          {/* Insurance Document */}
+          <ImagePickerField
+            label="Insurance Document Photo"
+            sublabel="Current insurance policy snap"
+            value={insurancePhoto}
+            onChange={setInsurancePhoto}
           />
         </View>
 
@@ -301,6 +340,14 @@ export const EditLoanScreen = ({ route, navigation }) => {
             <Ionicons name="people" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Guarantor Information</Text>
           </View>
+
+          {/* Guarantor Photo */}
+          <ImagePickerField
+            label="Guarantor Photo"
+            sublabel="Guarantor photo capture or upload"
+            value={guarantorPhoto}
+            onChange={setGuarantorPhoto}
+          />
 
           <Text style={styles.inputLabel}>Guarantor Full Name</Text>
           <TextInput

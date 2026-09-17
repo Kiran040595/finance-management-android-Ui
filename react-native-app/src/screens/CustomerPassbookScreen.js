@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import Header from '../components/Header';
 import PaymentModal from '../components/PaymentModal';
+import PaymentReceiptModal from '../components/PaymentReceiptModal';
 import LoanService from '../services/loanService';
 import PaymentService from '../services/paymentService';
 
@@ -25,6 +26,8 @@ export const CustomerPassbookScreen = ({ route, navigation }) => {
   const [filterType, setFilterType] = useState('ALL'); // ALL, CREDITS (Jama), DEBITS (Udhar), UPCOMING
   const [selectedEmiForPayment, setSelectedEmiForPayment] = useState(null);
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
 
   const fetchLoanData = useCallback(async () => {
     try {
@@ -249,10 +252,53 @@ Generated on: ${new Date().toLocaleDateString('en-IN')}
     setPaymentModalVisible(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (paymentData) => {
     setPaymentModalVisible(false);
     setSelectedEmiForPayment(null);
+    if (paymentData) {
+      const remainingBal = Math.max(0, (loan.totalAmount || 0) - (loan.paidAmount || 0) - paymentData.amount);
+      const remainingEmiCount = Math.max(0, (loan.remainingEmi || loan.tenure || 1) - 1);
+      setCurrentReceipt({
+        receiptNumber: `REC-${Date.now().toString().slice(-6)}`,
+        date: paymentData.date,
+        fileNumber: loan.fileNumber,
+        customerName: loan.customerName,
+        customerPhone: loan.customerPhonePrimary || loan.customerPhone,
+        vehicleModel: loan.vehicleModel,
+        vehicleNumber: loan.vehicleNumber,
+        emiNumber: paymentData.emiNumber,
+        amount: paymentData.amount,
+        baseAmount: paymentData.baseEmiAmount,
+        penaltyCollected: paymentData.penaltyCollected,
+        mode: paymentData.mode,
+        agentName: paymentData.agentName,
+        remainingBalance: remainingBal,
+        remainingEmis: remainingEmiCount,
+      });
+      setReceiptModalVisible(true);
+    }
     fetchLoanData();
+  };
+
+  const handleViewCreditReceipt = (item) => {
+    setCurrentReceipt({
+      receiptNumber: item.receipt || `REC-${Date.now().toString().slice(-6)}`,
+      date: item.date,
+      fileNumber: loan.fileNumber,
+      customerName: loan.customerName,
+      customerPhone: loan.customerPhonePrimary || loan.customerPhone,
+      vehicleModel: loan.vehicleModel,
+      vehicleNumber: loan.vehicleNumber,
+      emiNumber: item.emiNumber || 1,
+      amount: item.credit,
+      baseAmount: item.credit,
+      penaltyCollected: 0,
+      mode: item.mode || 'Cash',
+      agentName: item.agent || 'Administrator',
+      remainingBalance: item.balance,
+      remainingEmis: null,
+    });
+    setReceiptModalVisible(true);
   };
 
   if (loading || !loan) {
@@ -488,6 +534,17 @@ Generated on: ${new Date().toLocaleDateString('en-IN')}
                       {item.agent && item.agent !== '-' ? (
                         <Text style={styles.agentTag}>By {item.agent}</Text>
                       ) : null}
+
+                      {isCredit && (
+                        <TouchableOpacity
+                          style={styles.receiptPillBtn}
+                          onPress={() => handleViewCreditReceipt(item)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="receipt-outline" size={11} color="#059669" />
+                          <Text style={styles.receiptPillBtnText}>Receipt</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
 
                     {/* Pay Button for Upcoming EMIs */}
@@ -533,6 +590,13 @@ Generated on: ${new Date().toLocaleDateString('en-IN')}
           onSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* Payment Receipt Modal */}
+      <PaymentReceiptModal
+        visible={receiptModalVisible}
+        receipt={currentReceipt}
+        onClose={() => setReceiptModalVisible(false)}
+      />
     </View>
   );
 };
@@ -962,6 +1026,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textMuted,
     fontStyle: 'italic',
+  },
+  receiptPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  receiptPillBtnText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#059669',
   },
   payEmiBtn: {
     flexDirection: 'row',

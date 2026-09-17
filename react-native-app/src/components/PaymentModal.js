@@ -13,8 +13,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
 import authService from '../services/authService';
+import PaymentService from '../services/paymentService';
 
-export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
+export const PaymentModal = ({ visible, emi, onClose, onConfirm, onSuccess }) => {
   const [amount, setAmount] = useState('');
   const [baseEmiAmount, setBaseEmiAmount] = useState(0);
   const [penaltyAmount, setPenaltyAmount] = useState('0');
@@ -98,7 +99,7 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
 
     try {
       setLoading(true);
-      await onConfirm({
+      const paymentData = {
         fileNumber: emi.fileNumber,
         emiNumber: emi.emiNumber,
         amount: numericAmount,
@@ -109,7 +110,26 @@ export const PaymentModal = ({ visible, emi, onClose, onConfirm }) => {
         mode,
         notes,
         agentName: collectorAgent || currentUser?.name || 'Admin',
-      });
+      };
+
+      if (onConfirm) {
+        await onConfirm(paymentData);
+      } else if (onSuccess) {
+        await PaymentService.payEMI(
+          paymentData.fileNumber,
+          paymentData.emiNumber,
+          paymentData.amount,
+          paymentData.date,
+          paymentData.mode,
+          paymentData.notes,
+          {
+            agentName: paymentData.agentName,
+            penaltyCollected: paymentData.penaltyCollected,
+            penaltyWaived: paymentData.penaltyWaived,
+          }
+        );
+        await onSuccess(paymentData);
+      }
       setLoading(false);
       onClose();
     } catch (e) {

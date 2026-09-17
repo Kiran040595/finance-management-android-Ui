@@ -314,6 +314,19 @@ export const LoanService = {
     return VehicleFinanceStore.deleteLoan(id);
   },
 
+  /**
+   * Settle and foreclose an active loan early
+   */
+  async forecloseLoan(fileNumber, settlementData) {
+    try {
+      const cleanFileNumber = parseInt(String(fileNumber).replace(/\D/g, ''), 10) || fileNumber;
+      await apiClient.post(`/api/payment/foreclose/${cleanFileNumber}`, settlementData);
+    } catch (err) {
+      console.warn('Backend foreclosure notice (using local store):', err.message);
+    }
+    return VehicleFinanceStore.forecloseLoan(fileNumber, settlementData);
+  },
+
   async resetData() {
     return VehicleFinanceStore.resetToDefaultData();
   },

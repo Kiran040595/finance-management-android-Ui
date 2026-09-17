@@ -15,6 +15,10 @@ import { colors, spacing, borderRadius } from '../styles/theme';
 import Header from '../components/Header';
 import PaymentModal from '../components/PaymentModal';
 import EditEmiModal from '../components/EditEmiModal';
+import PaymentReceiptModal from '../components/PaymentReceiptModal';
+import ForeclosureModal from '../components/ForeclosureModal';
+import RtoNocModal from '../components/RtoNocModal';
+import SeizureNoticeModal from '../components/SeizureNoticeModal';
 import LoanService from '../services/loanService';
 import PaymentService from '../services/paymentService';
 import authService from '../services/authService';
@@ -32,6 +36,19 @@ export const LoanDetailScreen = ({ route, navigation }) => {
   // Edit EMI Modal
   const [editingEmi, setEditingEmi] = useState(null);
   const [editEmiModalVisible, setEditEmiModalVisible] = useState(false);
+
+  // Receipt Modal
+  const [currentReceipt, setCurrentReceipt] = useState(null);
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+
+  // Foreclosure Modal
+  const [foreclosureModalVisible, setForeclosureModalVisible] = useState(false);
+
+  // RTO Form 35 NOC Modal
+  const [rtoNocModalVisible, setRtoNocModalVisible] = useState(false);
+
+  // Seizure / Legal Demand Notice Modal
+  const [seizureModalVisible, setSeizureModalVisible] = useState(false);
 
   const isAdmin = authService.isAdmin();
 
@@ -80,8 +97,65 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         penaltyWaived: paymentData.penaltyWaived,
       }
     );
-    Alert.alert('Payment Recorded', `Recorded payment for EMI #${paymentData.emiNumber}`);
+
+    const newRemainingBalance = Math.max(0, (loan.totalAmount || 0) - (loan.paidAmount || 0) - paymentData.amount);
+    const newRemainingEmis = Math.max(0, (loan.remainingEmi || loan.tenure || 1) - 1);
+
+    setCurrentReceipt({
+      receiptNumber: `REC-${Date.now().toString().slice(-6)}`,
+      date: paymentData.date,
+      fileNumber: loan.fileNumber,
+      customerName: loan.customerName,
+      customerPhone: loan.customerPhone || loan.customerPhonePrimary,
+      vehicleModel: loan.vehicleModel,
+      vehicleNumber: loan.vehicleNumber,
+      emiNumber: paymentData.emiNumber,
+      amount: paymentData.amount,
+      baseAmount: paymentData.baseEmiAmount,
+      penaltyCollected: paymentData.penaltyCollected,
+      mode: paymentData.mode,
+      agentName: paymentData.agentName,
+      remainingBalance: newRemainingBalance,
+      remainingEmis: newRemainingEmis,
+    });
+    setReceiptModalVisible(true);
     fetchDetail();
+  };
+
+  const handleViewReceipt = (item) => {
+    setCurrentReceipt({
+      receiptNumber: `REC-VF-${item.emiNumber}${Date.now().toString().slice(-4)}`,
+      date: item.paidDate || item.emiDate,
+      fileNumber: loan.fileNumber,
+      customerName: loan.customerName,
+      customerPhone: loan.customerPhone || loan.customerPhonePrimary,
+      vehicleModel: loan.vehicleModel,
+      vehicleNumber: loan.vehicleNumber,
+      emiNumber: item.emiNumber,
+      amount: item.paidAmount || item.emiAmount,
+      baseAmount: item.emiAmount,
+      penaltyCollected: item.penaltyCollected || 0,
+      mode: item.paymentMode || 'Cash',
+      agentName: item.agentName || 'Administrator',
+      remainingBalance: null,
+      remainingEmis: null,
+    });
+    setReceiptModalVisible(true);
+  };
+
+  const handleSettlementComplete = (settlementData) => {
+    fetchDetail();
+    Alert.alert(
+      'Loan Settled & Closed!',
+      `Loan #${loan.fileNumber} has been closed with settlement of ₹${Math.round(settlementData.settlementAmount).toLocaleString('en-IN')}.\n\nWould you like to view the official RTO Form 35 NOC Certificate now?`,
+      [
+        { text: 'Later', style: 'cancel' },
+        {
+          text: 'View RTO NOC',
+          onPress: () => setRtoNocModalVisible(true),
+        },
+      ]
+    );
   };
 
   const handleOpenEditEmi = (emi) => {
@@ -149,6 +223,11 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         }
       })()
     : [];
+
+  const hasOverdue =
+    loan.status === 'Overdue' ||
+    (Array.isArray(loan.emiDetails) &&
+      loan.emiDetails.some((e) => e.status !== 'Paid' && new Date(e.emiDate) < new Date()));
 
   return (
     <View style={styles.container}>
@@ -232,6 +311,87 @@ export const LoanDetailScreen = ({ route, navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.primary} />
         </TouchableOpacity>
+
+        {/* RTO Form 35 NOC Certificate Banner (if loan is Closed) */}
+        {loan.status === 'Closed' && (
+          <TouchableOpacity
+            style={styles.nocBannerCard}
+            onPress={() => setRtoNocModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.nocBannerLeft}>
+              <View style={styles.nocIconCircle}>
+                <Ionicons name="ribbon" size={22} color="#ffffff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.nocBannerTitle}>RTO Form 35 NOC Certificate</Text>
+                  <View style={styles.nocClearedTag}>
+                    <Text style={styles.nocClearedTagText}>LOAN CLOSED</Text>
+                  </View>
+                </View>
+                <Text style={styles.nocBannerSubtitle}>
+                  Hypothecation cancellation letter for RTO & RC Book endorsement
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#059669" />
+          </TouchableOpacity>
+        )}
+
+        {/* Foreclose / Settle Loan Banner (if loan is Active) */}
+        {loan.status !== 'Closed' && (
+          <TouchableOpacity
+            style={styles.forecloseBannerCard}
+            onPress={() => setForeclosureModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.forecloseBannerLeft}>
+              <View style={styles.forecloseIconCircle}>
+                <Ionicons name="calculator" size={22} color="#ffffff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.forecloseBannerTitle}>Foreclose / Settle Loan</Text>
+                  <View style={styles.forecloseTag}>
+                    <Text style={styles.forecloseTagText}>PRE-CLOSURE</Text>
+                  </View>
+                </View>
+                <Text style={styles.forecloseBannerSubtitle}>
+                  Audit unearned interest rebate & settle account with instant NOC
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#0d9488" />
+          </TouchableOpacity>
+        )}
+
+        {/* 7-Day Repossession Legal Notice Banner (if loan has overdue EMIs) */}
+        {hasOverdue && (
+          <TouchableOpacity
+            style={styles.seizureBannerCard}
+            onPress={() => setSeizureModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.seizureBannerLeft}>
+              <View style={styles.seizureIconCircle}>
+                <Ionicons name="warning" size={22} color="#ffffff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.seizureBannerTitle}>7-Day Repossession Legal Notice</Text>
+                  <View style={styles.seizureTag}>
+                    <Text style={styles.seizureTagText}>LEGAL DEMAND</Text>
+                  </View>
+                </View>
+                <Text style={styles.seizureBannerSubtitle}>
+                  Issue formal repossession & legal notice to defaulter on WhatsApp
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#dc2626" />
+          </TouchableOpacity>
+        )}
 
         {/* Status & Borrower Card */}
         <View style={styles.card}>
@@ -534,7 +694,13 @@ export const LoanDetailScreen = ({ route, navigation }) => {
                     <Text style={styles.miniPayText}>Pay</Text>
                   </TouchableOpacity>
                 ) : (
-                  <Ionicons name="checkmark-done" size={17} color={colors.success} />
+                  <TouchableOpacity
+                    style={styles.receiptIconBtn}
+                    onPress={() => handleViewReceipt(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="receipt-outline" size={16} color="#059669" />
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -556,6 +722,35 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         emi={editingEmi}
         onClose={() => setEditEmiModalVisible(false)}
         onSave={handleSaveEmi}
+      />
+
+      {/* Payment Receipt Modal */}
+      <PaymentReceiptModal
+        visible={receiptModalVisible}
+        receipt={currentReceipt}
+        onClose={() => setReceiptModalVisible(false)}
+      />
+
+      {/* Foreclosure / Settlement Modal */}
+      <ForeclosureModal
+        visible={foreclosureModalVisible}
+        loan={loan}
+        onClose={() => setForeclosureModalVisible(false)}
+        onSettled={handleSettlementComplete}
+      />
+
+      {/* RTO Form 35 NOC Certificate Modal */}
+      <RtoNocModal
+        visible={rtoNocModalVisible}
+        loan={loan}
+        onClose={() => setRtoNocModalVisible(false)}
+      />
+
+      {/* Seizure / Legal Demand Notice Modal */}
+      <SeizureNoticeModal
+        visible={seizureModalVisible}
+        loan={loan}
+        onClose={() => setSeizureModalVisible(false)}
       />
     </View>
   );
@@ -655,6 +850,174 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  nocBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#6ee7b7',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  nocBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  nocIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nocBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#065f46',
+  },
+  nocClearedTag: {
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+  },
+  nocClearedTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  nocBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  forecloseBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1.5,
+    borderColor: '#99f6e4',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    shadowColor: '#0d9488',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  forecloseBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  forecloseIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#0d9488',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  forecloseBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#115e59',
+  },
+  forecloseTag: {
+    backgroundColor: '#ccfbf1',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#5eead4',
+  },
+  forecloseTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#0d9488',
+  },
+  forecloseBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  seizureBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1.5,
+    borderColor: '#fca5a5',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  seizureBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  seizureIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seizureBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#991b1b',
+  },
+  seizureTag: {
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  seizureTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#dc2626',
+  },
+  seizureBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  receiptIconBtn: {
+    padding: 5,
+    backgroundColor: '#ecfdf5',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionBtnSecondary: {
     flex: 1,

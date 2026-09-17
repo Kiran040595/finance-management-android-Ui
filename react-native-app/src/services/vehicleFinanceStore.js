@@ -144,6 +144,63 @@ class VehicleFinanceStore {
     return { success: true, loan, emi };
   }
 
+  static async forecloseLoan(fileNumber, settlementData = {}) {
+    const loans = await this.getLoans();
+    const loanIndex = loans.findIndex(
+      (l) =>
+        String(l.fileNumber).toLowerCase() === String(fileNumber).toLowerCase() ||
+        String(l.id).toLowerCase() === String(fileNumber).toLowerCase()
+    );
+
+    if (loanIndex === -1) throw new Error('Loan not found');
+
+    const loan = loans[loanIndex];
+    const todayStr = settlementData.date || new Date().toISOString().split('T')[0];
+    const settlementAmount = Number(settlementData.settlementAmount || 0);
+    const agentName = settlementData.agentName || 'Administrator';
+    const notes = settlementData.notes || 'Full loan pre-closure settlement';
+    const mode = settlementData.mode || 'Cash';
+
+    // Mark all remaining unpaid EMIs as Settled
+    if (Array.isArray(loan.emiDetails)) {
+      loan.emiDetails.forEach((emi) => {
+        if (emi.status !== 'Paid') {
+          emi.status = 'Paid';
+          emi.remainingAmount = 0;
+          emi.paidAmount = emi.emiAmount || 0;
+          emi.paidDate = todayStr;
+          emi.paymentMode = mode;
+          emi.notes = notes;
+          emi.agentName = agentName;
+        }
+      });
+    }
+
+    loan.status = 'Closed';
+    loan.remainingEmi = 0;
+    loan.paidEmiCount = loan.tenure || loan.emiDetails?.length || 0;
+    loan.foreclosureDetails = {
+      settlementAmount,
+      foreclosureDate: todayStr,
+      paymentMode: mode,
+      notes,
+      settledBy: agentName,
+      principalPaidAtClose: Number(settlementData.principalOutstanding || 0),
+      interestRebate: Number(settlementData.interestRebate || 0),
+      penaltiesPaid: Number(settlementData.penaltiesPaid || 0),
+      discount: Number(settlementData.discount || 0),
+      nocGenerated: false,
+    };
+
+    loans[loanIndex] = loan;
+    inMemoryLoans = loans;
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
+    } catch (e) {}
+
+    return { success: true, loan };
+  }
+
   static async getUpcomingEMIs() {
     const loans = await this.getLoans();
     const today = new Date();

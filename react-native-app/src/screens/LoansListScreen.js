@@ -123,7 +123,11 @@ export const LoansListScreen = ({ navigation }) => {
           data={filteredLoans}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <LoanCard loan={item} onPress={() => navigation.navigate('LoanDetail', { loanId: item.id })} />
+            <LoanCard
+              loan={item}
+              onPress={() => navigation.navigate('LoanDetail', { loanId: item.id })}
+              onPassbookPress={() => navigation.navigate('CustomerPassbook', { loanId: item.id, loan: item })}
+            />
           )}
           contentContainerStyle={styles.listContent}
           refreshing={refreshing}

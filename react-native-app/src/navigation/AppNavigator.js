@@ -20,6 +20,7 @@ import DayEndSummaryScreen from '../screens/DayEndSummaryScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
+import CustomerPassbookScreen from '../screens/CustomerPassbookScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -165,6 +166,11 @@ export function AppNavigator() {
       <Stack.Screen
         name="PaymentTracking"
         component={PaymentTrackingScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="CustomerPassbook"
+        component={CustomerPassbookScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

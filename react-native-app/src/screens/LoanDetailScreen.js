@@ -172,12 +172,21 @@ export const LoanDetailScreen = ({ route, navigation }) => {
         {/* Management Actions Row */}
         <View style={styles.managementBar}>
           <TouchableOpacity
+            style={styles.actionBtnPassbook}
+            onPress={() => navigation.navigate('CustomerPassbook', { loanId: loan.id, loan })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="book" size={16} color="#ffffff" />
+            <Text style={styles.actionBtnPassbookText}>Khata Passbook</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.actionBtnSecondary}
             onPress={() => navigation.navigate('EditLoan', { loan })}
             activeOpacity={0.7}
           >
             <Ionicons name="create-outline" size={16} color={colors.primary} />
-            <Text style={styles.actionBtnSecondaryText}>Edit Loan Info</Text>
+            <Text style={styles.actionBtnSecondaryText}>Edit Loan</Text>
           </TouchableOpacity>
 
           {isAdmin && (
@@ -192,12 +201,37 @@ export const LoanDetailScreen = ({ route, navigation }) => {
               ) : (
                 <>
                   <Ionicons name="trash-outline" size={16} color={colors.error} />
-                  <Text style={styles.actionBtnDangerText}>Delete Loan</Text>
+                  <Text style={styles.actionBtnDangerText}>Delete</Text>
                 </>
               )}
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Khatabook Passbook Banner Card */}
+        <TouchableOpacity
+          style={styles.passbookBannerCard}
+          onPress={() => navigation.navigate('CustomerPassbook', { loanId: loan.id, loan })}
+          activeOpacity={0.8}
+        >
+          <View style={styles.passbookBannerLeft}>
+            <View style={styles.passbookIconCircle}>
+              <Ionicons name="book" size={22} color="#ffffff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.passbookBannerTitle}>Customer Khata Passbook</Text>
+                <View style={styles.khatabookTag}>
+                  <Text style={styles.khatabookTagText}>KHATA</Text>
+                </View>
+              </View>
+              <Text style={styles.passbookBannerSubtitle}>
+                Running balance ledger, Udhar/Jama, WhatsApp statement & UPI
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+        </TouchableOpacity>
 
         {/* Status & Borrower Card */}
         <View style={styles.card}>
@@ -548,6 +582,79 @@ const styles = StyleSheet.create({
   managementBar: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  actionBtnPassbook: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0f766e',
+    borderRadius: borderRadius.md,
+    paddingVertical: 10,
+    gap: 6,
+    shadowColor: '#0f766e',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionBtnPassbookText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  passbookBannerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  passbookBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    paddingRight: 8,
+  },
+  passbookIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passbookBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#15803d',
+  },
+  khatabookTag: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  khatabookTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#16a34a',
+  },
+  passbookBannerSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   actionBtnSecondary: {
     flex: 1,

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '../styles/theme';
 
-export const LoanCard = ({ loan, onPress }) => {
+export const LoanCard = ({ loan, onPress, onPassbookPress }) => {
   const percentPaid = Math.round(((loan.paidEmiCount || 0) / (loan.tenure || 1)) * 100);
   const formatCurrency = (val) => '₹' + Number(val || 0).toLocaleString('en-IN');
 
@@ -66,6 +66,20 @@ export const LoanCard = ({ loan, onPress }) => {
           <Text style={styles.progressPercent}>{percentPaid}%</Text>
         </View>
       </View>
+
+      {/* Passbook Quick Action */}
+      {onPassbookPress && (
+        <View style={styles.cardFooter}>
+          <TouchableOpacity
+            style={styles.passbookBtn}
+            onPress={onPassbookPress}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="book-outline" size={14} color="#0f766e" />
+            <Text style={styles.passbookBtnText}>Customer Passbook</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
@@ -184,6 +198,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  cardFooter: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  passbookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdfa',
+    borderWidth: 1,
+    borderColor: '#99f6e4',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  passbookBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0f766e',
   },
 });
 
